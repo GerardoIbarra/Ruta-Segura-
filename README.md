@@ -1,13 +1,8 @@
 
-El hecho de que el juego nazca de una experiencia real tuya en Guadalajara —intentando hacer algo tan cotidiano como comprarle flores a tu hermana para su cumpleaños mientras la ciudad se blinda con maderas y la tensión sube— es exactamente el tipo de narrativa que los *publishers* y los jugadores buscan. Demuestra que las mecánicas (el *Threat Score*, el evitar ciertas calles, el encapsulamiento) no son inventos de un diseñador aburrido, sino situaciones de supervivencia urbana que los latinoamericanos vivimos constantemente.
 
-Y conectarlo con la realidad actual de este **octubre de 2026** (el problema del agua sucia en GDL, la crisis del IMSS en CDMX, y las réplicas globales en España y Francia) eleva el juego de una simple anécdota local a una **experiencia universal sobre el colapso de las urbes modernas**.
+# Documento Técnico de Producción (v8) — “Ruta Segura / Marea / Calle Abierta”
 
-Aquí tienes el **GDD v7**, donde he integrado esta historia como el pilar fundamental del proyecto (Nivel 0).
 
----
-
-# Documento Técnico de Producción (v7) — “Ruta Segura / Marea / Calle Abierta”
 
 **Base del equipo:** Repositorio `msitarzewski/agency-agents`
 **Motor Gráfico:** Unity (High Definition Render Pipeline - HDRP + DOTS/Entities)
@@ -16,14 +11,10 @@ Aquí tienes el **GDD v7**, donde he integrado esta historia como el pilar funda
 ## Nivel 0 — Origen del Proyecto y Contexto Sociopolítico (La Visión)
 
 **La Inspiración Base:**
-El concepto nace de una experiencia real en el centro de Guadalajara (8M, 2021). El protagonista intentaba realizar una tarea cotidiana (comprar flores para el cumpleaños de su hermana) mientras la ciudad comenzaba a blindarse con mallas y maderas. La experiencia de ser perfilado por la multitud —donde el simple hecho de ser un hombre cruzando por la zona equivocada podía detonar agresiones y persecuciones— inspiró el sistema central del juego: **el peligro de estar en el lugar equivocado con el perfil equivocado.**
+El concepto nace de una experiencia real en el centro de Guadalajara (8M, 2021). El protagonista intentaba realizar una tarea cotidiana (comprar flores para el cumpleaños de su hermana) mientras la ciudad comenzaba a blindarse con mallas y maderas. La experiencia de ser perfilado por la multitud —donde el simple hecho de cruzar por la zona equivocada podía detonar persecuciones— inspiró el sistema central del juego: **el peligro de estar en el lugar equivocado con el perfil equivocado.**
 
 **Relevancia Contemporánea (Octubre 2026):**
-El juego actúa como un reflejo del clima social global actual. Los niveles y bloqueos se inspiran en conflictos reales que paralizan la vida urbana:
-
-* **Locales:** Las manifestaciones recientes en Guadalajara por la exigencia de agua limpia y los bloqueos en CDMX por las crisis en los hospitales del IMSS.
-* **Globales:** Ecos de la crisis de vivienda en España y las huelgas de educación en Francia.
-El juego no juzga las causas sociales; simplemente expone al jugador al desafío de sobrevivir al colapso logístico que estas generan.
+El juego actúa como un reflejo del clima social global actual, inspirándose en conflictos reales que paralizan la vida urbana: la exigencia de agua limpia en Guadalajara, las crisis en los hospitales del IMSS en CDMX, la crisis de vivienda en España y las huelgas de educación en Francia. El juego expone al jugador al desafío de sobrevivir al colapso logístico que estas crisis generan en las urbes modernas.
 
 ## Resumen Ejecutivo
 
@@ -43,8 +34,8 @@ Un videojuego de navegación urbana, lectura del entorno y sigilo social. El jug
 ## Nivel 2 — Estados de Tensión y Escenarios Dinámicos
 
 * **🟢 Nivel Verde (Marcha Pacífica):** Multitud estructurada. Reto logístico ("Laberinto de Vallas"). Navegación lenta pero segura.
-* **🟡 Nivel Amarillo (Acción Directa / Perfilamiento):** Cortes viales severos. Comercios cerrando cortinas de acero y poniendo tablas. Riesgo de ser perfilado (por autoridades o por la misma marcha, dependiendo de tu apariencia/género/vestimenta).
-* **🔴 Nivel Rojo (Estallido):** Uso de gas lacrimógeno (penalización de ceguera). "Efecto Barrido" policial (Hazard de avalancha). El objetivo cambia a buscar refugio inmediato en zaguanes o negocios.
+* **🟡 Nivel Amarillo (Acción Directa / Perfilamiento):** Cortes viales severos. Comercios cerrando cortinas de acero y poniendo tablas. Riesgo de ser perfilado por autoridades o la misma marcha.
+* **🔴 Nivel Rojo (Estallido):** Uso de gas lacrimógeno (penalización de ceguera). "Efecto Barrido" policial (Hazard de avalancha). El objetivo cambia a buscar refugio inmediato en zaguanes o negocios (ej. florerías).
 * **🎉 Evento Masivo (Festejo Deportivo):** El "Falso Verde". Comienza festivo pero la marea humana arrastra al jugador y puede escalar a Rojo por riñas.
 
 ---
@@ -52,15 +43,12 @@ Un videojuego de navegación urbana, lectura del entorno y sigilo social. El jug
 ## Nivel 3 — Matemáticas del Juego y Optimización de IA
 
 **3.1. Simulación de la "Marea Humana" (Vector / Flow Fields)**
-Uso de un Grid 2D direccional (Unity DOTS/Burst) para simular multitudes sin colapsar el CPU.
-
-* **Mecánica de arrastre:** Entrar a una celda de alta densidad aplica una fuerza direccional (`AddForce`), obligando al jugador a moverse lateralmente para salir de la corriente.
+Uso de un Grid 2D direccional (Unity DOTS/Burst) para simular multitudes. Entrar a una celda de alta densidad aplica una fuerza direccional (`AddForce`), obligando al jugador a moverse lateralmente para salir de la corriente.
 
 **3.2. Modelo del Perfilamiento (Threat Score)**
-La IA (tanto policial como grupos radicales) evalúa la amenaza del jugador ($T$) en una escala de 0 a 100:
+La IA evalúa la amenaza del jugador ($T$) en una escala de 0 a 100:
 $T = (Base_{vestimenta/perfil} + Mod_{celular}) \times Multiplicador_{postura} \times Entorno - Cobertura$
-
-* *El Threat Score es contextual:* Vestir de oficinista te vuelve invisible para la policía, pero te puede hacer blanco de hostilidad si intentas cruzar un bloqueo sindical. Ser hombre en una marcha separatista eleva el $T$ al máximo automáticamente en esa zona específica.
+El Threat Score es contextual a la zona (ej. vestir ropa corporativa reduce amenaza policial, pero puede incrementarla en zonas de huelga).
 
 **3.3. El "Efecto Barrido" (Nivel Rojo)**
 La formación de barrido es un *Compound Hazard Object* (`BoxCollider`) que empuja o arresta todo a su paso, con un `Post-Processing Volume` vinculado (gas lacrimógeno).
@@ -72,15 +60,15 @@ La formación de barrido es un *Compound Hazard Object* (`BoxCollider`) que empu
 La UI existe en *World Space* en las manos del personaje.
 
 * **RutaLibre (GPS):** Muestra congestión y bloqueos. Requiere señal.
-* **Eco Urbano (Red Social):** Feed en vivo para anticipar cierres ("Están poniendo maderas en Av. Juárez", "No hay paso por el IMSS").
-* **Modo Avión (Stealth Digital):** Reduce consumo y silencia alertas, pero desconecta al jugador de la información en vivo.
+* **Eco Urbano (Red Social):** Feed en vivo para anticipar cierres ("Están poniendo maderas en Av. Juárez").
+* **Modo Avión (Stealth Digital):** Reduce consumo de batería y silencia alertas, pero desconecta de la red.
 
 ---
 
 ## Nivel 5 — Progresión y Karma Urbano
 
 * **El Loadout Diario:** La elección de mochila o prendas modifica tu perfil desde el inicio.
-* **Karma Urbano:** Navegar con "Empatía" permite que los comerciantes (como los de la florería) te dejen entrar a refugiarte cuando las cosas se salgan de control.
+* **Karma Urbano:** Navegar con "Empatía" permite que los comerciantes te dejen entrar a refugiarte cuando las cosas se salgan de control.
 
 ---
 
@@ -92,8 +80,96 @@ La UI existe en *World Space* en las manos del personaje.
 
 ---
 
-## Nivel 7 — Estructura del Equipo (10 Agentes)
+## Nivel 7 — Equipamiento, Instalaciones y Entregables por Agente
 
-* **Técnico y Diseño:** Unity Architect (Marea Humana DOTS), Unity Shader Graph Artist (VFX/Gas), Game Designer (Threat Score), Level Designer (Grayboxing de calles).
-* **Operaciones:** Project Shepherd (Orquestación), Jira Workflow Steward (Git/Jira), UI Designer (Celular), Blender Addon Engineer (Topografía OSM).
-* **Calidad:** Reality Checker (Precisión sociopolítica y respeto al contexto), Performance Benchmarker (Optimización de FPS).
+Para la ejecución del **Sprint 1 (Prototipo 0.1)**, el equipo de 10 agentes requiere la siguiente infraestructura y deberá producir estos archivos exactos:
+
+### 🛠️ Núcleo Técnico y de Diseño (Constructores)
+
+**1. Unity Architect**
+
+* **Software/Instalaciones:** Unity Editor (versión LTS actual), paquete *Entities* (DOTS) y *Burst Compiler*.
+* **Archivos Entregables:**
+* `PlayerController.cs`: Movimiento en primera persona y control de inercia.
+* `CrowdFlowSystem.cs`: Lectura del Grid 2D y aplicación de fuerza direccional (Marea Humana).
+* `PhoneController.cs`: Lógica de activación de la UI diegética y drenaje de batería.
+
+
+
+**2. Unity Shader Graph Artist**
+
+* **Software/Instalaciones:** Unity HDRP configurado con volúmenes locales.
+* **Archivos Entregables:**
+* `TearGas_VFX.prefab`: Humo volumétrico reactivo a la luz.
+* `WetAsphalt_Mat.mat`: Material reflectante para asfalto mojado.
+* `PoliceStrobe_Light.prefab`: Sistema de luces estroboscópicas optimizadas.
+
+
+
+**3. Game Designer**
+
+* **Software/Instalaciones:** Microsoft Excel o Google Sheets.
+* **Archivos Entregables:**
+* `ThreatScore_Balance.xlsx`: Matriz matemática de valores de amenaza (ropa, postura, acciones).
+
+
+
+**4. Level Designer**
+
+* **Software/Instalaciones:** Unity con paquete *ProBuilder*.
+* **Archivos Entregables:**
+* `Scene_01_GDL_Juarez.unity`: Ensamblaje principal (graybox).
+* `SafeZone_Floreria.prefab`: Volumen interactivo de refugio que reduce el *Threat Score* a cero.
+
+
+
+### 🎒 Operaciones y Arte (Soporte)
+
+**5. Project Shepherd**
+
+* **Software/Instalaciones:** Acceso administrador al Project Board (GitHub/Jira).
+* **Archivos Entregables:** El GDD v8 y el control de alcance (aprobación/rechazo de features no planeadas).
+
+**6. Jira Workflow Steward**
+
+* **Software/Instalaciones:** Acceso root al repositorio de GitHub, Git CLI, Git LFS.
+* **Archivos Entregables:**
+* `.gitignore` para Unity.
+* `.gitattributes` para gestión de binarios y modelos 3D.
+* Configuración de reglas de protección en la rama `main`.
+
+
+
+**7. UI Designer**
+
+* **Software/Instalaciones:** Figma o Adobe XD.
+* **Archivos Entregables:**
+* `UI_RutaLibre_Map.png`: Mapa GPS base.
+* `UI_EcoUrbano_Feed.png`: Diseño del feed social.
+* Íconos vectoriales del estado de batería (SVG).
+
+
+
+**8. Blender Addon Engineer**
+
+* **Software/Instalaciones:** Blender 3.x+ con el Addon *OpenStreetMap (OSM)*.
+* **Archivos Entregables:**
+* `GDL_Juarez_Mesh.fbx`: Topografía limpia y escalada (1m = 1 unidad Unity) de la zona centro, con colisiones básicas.
+
+
+
+### 🔍 División de Calidad (Validación)
+
+**9. Reality Checker**
+
+* **Software/Instalaciones:** Base de datos documental (referencias de video/fotografía de marchas reales, 8M 2021, crisis de 2026).
+* **Archivos Entregables:**
+* *Checklist de Contexto Cultural*: Documento de validación de materiales (ej. vallas de madera/acero estilo LatAm, equipo antimotines correcto).
+
+
+
+**10. Performance Benchmarker**
+
+* **Software/Instalaciones:** Unity Profiler, Frame Debugger.
+* **Archivos Entregables:**
+* *Reporte de Estabilidad*: Validación escrita del rendimiento (ej. mantenimiento de FPS estables con 50+ NPCs y volúmenes de gas activos).
