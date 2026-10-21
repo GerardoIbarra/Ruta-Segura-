@@ -33,10 +33,25 @@ namespace RutaSegura.Runtime.Player
         [SerializeField] private float gravity = -18.0f;
         [SerializeField] private float groundCheckOffset = -0.1f;
 
-        [Header("Sensibilidad de Cámara")]
-        [Range(0.05f, 2.0f)]
-        [SerializeField] private float lookSensitivity = 0.2f;
-        [SerializeField] private float verticalLookLimit = 85.0f;
+        [Header("Sensibilidad y Calibración de Cámara")]
+        [Tooltip("Sensibilidad general del ratón")]
+        [Range(0.01f, 0.5f)]
+        [SerializeField] private float lookSensitivity = 0.06f;
+
+        [Tooltip("Multiplicador vertical (reduce la tendencia a subir/bajar de golpe)")]
+        [Range(0.3f, 1.0f)]
+        [SerializeField] private float verticalSensitivityMultiplier = 0.6f;
+
+        [Tooltip("Límite de inclinación vertical hacia arriba/abajo en grados")]
+        [Range(50f, 85f)]
+        [SerializeField] private float verticalLookLimit = 70.0f;
+
+        [Tooltip("Suavizado cinemático de cámara para evitar saltos bruscos")]
+        [SerializeField] private bool smoothCamera = true;
+
+        [Range(5f, 30f)]
+        [SerializeField] private float cameraSmoothSpeed = 18.0f;
+
         [SerializeField] private bool invertY = false;
 
         [Header("Estados Actuales (Lectura)")]
@@ -54,6 +69,7 @@ namespace RutaSegura.Runtime.Player
 
         private Vector2 moveInput;
         private Vector2 lookInput;
+        private Vector2 currentLookVector;
         private float verticalVelocity;
         private float cameraPitch = 0.0f;
 
@@ -68,6 +84,12 @@ namespace RutaSegura.Runtime.Player
             if (playerCamera == null)
             {
                 playerCamera = GetComponentInChildren<Camera>();
+            }
+
+            // Calibrar sensibilidad si venía con el valor por defecto anterior (0.2f)
+            if (lookSensitivity > 0.15f)
+            {
+                lookSensitivity = 0.06f;
             }
 
             SetupInput();
@@ -167,13 +189,24 @@ namespace RutaSegura.Runtime.Player
         {
             if (playerCamera == null) return;
 
-            float mouseX = lookInput.x * lookSensitivity;
-            float mouseY = lookInput.y * lookSensitivity * (invertY ? 1f : -1f);
+            // Suavizado de la entrada del mouse para evitar sobresaltos
+            if (smoothCamera)
+            {
+                currentLookVector = Vector2.Lerp(currentLookVector, lookInput, cameraSmoothSpeed * Time.deltaTime);
+            }
+            else
+            {
+                currentLookVector = lookInput;
+            }
 
-            // Rotación horizontal (gira el cuerpo del personaje en el eje Y)
+            // Sensibilidad diferenciada: el eje vertical es más estable para no apuntar al cielo al caminar
+            float mouseX = currentLookVector.x * lookSensitivity;
+            float mouseY = currentLookVector.y * lookSensitivity * verticalSensitivityMultiplier * (invertY ? 1f : -1f);
+
+            // Rotación horizontal (gira el cuerpo en Y)
             transform.Rotate(Vector3.up * mouseX);
 
-            // Rotación vertical (inclina solo la cámara en el eje X)
+            // Rotación vertical (inclina solo la cabeza/cámara en X con límites acotados)
             cameraPitch -= mouseY;
             cameraPitch = Mathf.Clamp(cameraPitch, -verticalLookLimit, verticalLookLimit);
             playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
