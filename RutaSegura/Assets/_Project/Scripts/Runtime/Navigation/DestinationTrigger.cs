@@ -1,4 +1,5 @@
 using UnityEngine;
+using RutaSegura.Runtime.Mission;
 
 namespace RutaSegura.Runtime.Navigation
 {
@@ -40,6 +41,12 @@ namespace RutaSegura.Runtime.Navigation
             if (other.CompareTag("Player") || other.GetComponentInParent<Player.PlayerController>() != null)
             {
                 hasReachedDestination = true;
+
+                if (MissionController.Instance != null)
+                {
+                    MissionController.Instance.CompleteMission();
+                }
+
                 Debug.Log($"<color=green>[MISIÓN COMPLETADA]</color> {completionMessage} en: {destinationName}");
             }
         }
@@ -52,15 +59,20 @@ namespace RutaSegura.Runtime.Navigation
                 var originalColor = GUI.color;
                 GUI.color = Color.green;
 
-                var rect = new Rect(Screen.width / 2f - 200f, 60f, 400f, 80f);
+                var rect = new Rect(Screen.width / 2f - 220f, 60f, 440f, 90f);
                 var style = new GUIStyle(GUI.skin.box)
                 {
-                    fontSize = 20,
+                    fontSize = 18,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter
+                    alignment = TextAnchor.MiddleCenter,
+                    wordWrap = true
                 };
 
-                GUI.Box(rect, $"✓ {destinationName}\n{completionMessage}", style);
+                string timeInfo = MissionController.Instance != null 
+                    ? $"\nTiempo empleado: {MissionController.Instance.ElapsedTime:F1}s" 
+                    : "";
+
+                GUI.Box(rect, $"✓ {destinationName}\n{completionMessage}{timeInfo}", style);
                 GUI.color = originalColor;
             }
         }

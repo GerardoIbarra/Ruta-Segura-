@@ -189,6 +189,12 @@ namespace RutaSegura.Runtime.Player
         {
             if (playerCamera == null) return;
 
+            // Pausar giro de cámara con el ratón cuando el teléfono está abierto e interactuando
+            if (UI.PhoneHUD.Instance != null && UI.PhoneHUD.Instance.IsOpen)
+            {
+                return;
+            }
+
             // Suavizado de la entrada del mouse para evitar sobresaltos
             if (smoothCamera)
             {
