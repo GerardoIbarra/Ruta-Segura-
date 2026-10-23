@@ -32,7 +32,7 @@ namespace RutaSegura.Runtime.Threat
         [SerializeField] private bool isMissionFailed = false;
 
         [Header("HUD Visual en Prototipo")]
-        [SerializeField] private bool showDebugHUD = true;
+        [SerializeField] private bool showDebugHUD = false;
 
         // Tasa activa de cambio aplicada por zonas actuales
         private float activeThreatRate = 0f;

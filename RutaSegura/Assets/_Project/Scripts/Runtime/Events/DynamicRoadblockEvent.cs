@@ -1,12 +1,13 @@
 using UnityEngine;
 using RutaSegura.Runtime.Threat;
+using RutaSegura.Runtime.Navigation;
 
 namespace RutaSegura.Runtime.Events
 {
     /// <summary>
     /// Evento dinámico que altera las condiciones de una ruta en tiempo real.
     /// Simula el cierre repentino de una calle por vallas o cuerpos de seguridad,
-    /// obligando al jugador a adaptarse y buscar una ruta alternativa.
+    /// activa el marcador holográfico de ruta alternativa y obliga al jugador a adaptarse.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     [AddComponentMenu("Ruta Segura/Events/Dynamic Roadblock Event")]
@@ -18,6 +19,9 @@ namespace RutaSegura.Runtime.Events
 
         [Tooltip("Zona de amenaza que se activará o intensificará")]
         [SerializeField] private ThreatZone associatedThreatZone;
+
+        [Tooltip("Marcador AR que aparecerá proyectado en el asfalto frente al callejón")]
+        [SerializeField] private AlternativeRouteMarker alternativeRouteMarker;
 
         [Header("Mensaje Diegético (Eco Urbano / Alerta)")]
         [TextArea(2, 4)]
@@ -68,6 +72,12 @@ namespace RutaSegura.Runtime.Events
             if (roadblockBarrier != null)
             {
                 roadblockBarrier.SetActive(true);
+            }
+
+            // Activar el marcador AR en el suelo como en el video de referencia
+            if (alternativeRouteMarker != null)
+            {
+                alternativeRouteMarker.ActivateMarker();
             }
 
             // Aplicar pico de tensión al jugador
