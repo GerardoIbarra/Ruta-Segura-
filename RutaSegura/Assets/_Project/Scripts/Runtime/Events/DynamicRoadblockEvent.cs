@@ -25,7 +25,7 @@ namespace RutaSegura.Runtime.Events
 
         [Header("Mensaje Diegético (Eco Urbano / Alerta)")]
         [TextArea(2, 4)]
-        [SerializeField] private string alertNotification = "📢 [ECO URBANO]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas.";
+        [SerializeField] private string alertNotification = "[ECO URBANO - ALERTA VIAL]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas.";
 
         [Tooltip("Aumento inmediato de amenaza al presenciar el cierre")]
         [SerializeField] private float threatSpike = 20f;
@@ -94,23 +94,29 @@ namespace RutaSegura.Runtime.Events
             // Banner de notificación en la parte superior central simulando alerta del móvil
             if (notificationTimer > 0f)
             {
-                float bannerWidth = 550f;
-                float bannerHeight = 65f;
+                float bannerWidth = 520f;
+                float bannerHeight = 56f;
                 float x = (Screen.width - bannerWidth) / 2f;
-                float y = 15f;
+                float y = 18f;
 
                 var origColor = GUI.color;
-                GUI.color = new Color(0.95f, 0.4f, 0.1f, 0.95f);
+                GUI.color = new Color(0.10f, 0.12f, 0.16f, 0.94f);
+                GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), GUIContent.none);
 
-                var boxStyle = new GUIStyle(GUI.skin.box)
+                // Borde naranja de advertencia
+                GUI.color = new Color(0.95f, 0.45f, 0.12f, 0.95f);
+                GUI.DrawTexture(new Rect(x, y, bannerWidth, 2f), Texture2D.whiteTexture);
+
+                var boxStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 14,
+                    fontSize = 12,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true
                 };
+                boxStyle.normal.textColor = new Color(0.98f, 0.70f, 0.30f);
 
-                GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), alertNotification, boxStyle);
+                GUI.Label(new Rect(x + 12f, y + 4f, bannerWidth - 24f, bannerHeight - 8f), alertNotification, boxStyle);
                 GUI.color = origColor;
             }
         }

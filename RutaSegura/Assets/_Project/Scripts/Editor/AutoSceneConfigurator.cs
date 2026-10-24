@@ -21,7 +21,7 @@ namespace RutaSegura.Editor
             EditorApplication.delayCall += ExecuteAutoSetupSilent;
         }
 
-        [MenuItem("Tools/Ruta Segura/⚡ Auto-Configurar Todo (1 Clic)")]
+        [MenuItem("Tools/Ruta Segura/Auto-Configurar Todo (1 Clic)")]
         public static void ExecuteAutoSetupManual()
         {
             PerformSetup(showDialog: true);
@@ -130,17 +130,17 @@ namespace RutaSegura.Editor
             {
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
-                Debug.Log("<color=cyan>[AUTO-SETUP COMPLETO]</color> ¡Escena configurada y guardada al 100%!");
+                Debug.Log("<color=cyan>[AUTO-SETUP COMPLETO]</color> Escena configurada y guardada al 100%.");
             }
 
             if (showDialog)
             {
                 EditorUtility.DisplayDialog("Ruta Segura", 
-                    "¡Todo ha sido configurado y conectado automáticamente!\n\n" +
+                    "Configuración completada con éxito:\n\n" +
                     "• HUD biométrico de pulso activado en GameManager\n" +
                     "• Marcador AR proyectado en asfalto conectado\n" +
                     "• Señalética vial y valla vinculadas\n\n" +
-                    "¡Solo dale a Play (▶️) para probarlo!", "Aceptar");
+                    "Presiona Play para probar.", "Aceptar");
             }
         }
     }

@@ -6,6 +6,7 @@ namespace RutaSegura.Runtime.Navigation
     /// <summary>
     /// Zona de llegada / destino de la misión (ej. La Florería).
     /// Detecta la entrada del jugador y dispara el evento de éxito.
+    /// Diseñado sin emojis para mantener estética profesional.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     [AddComponentMenu("Ruta Segura/Navigation/Destination Trigger")]
@@ -16,7 +17,7 @@ namespace RutaSegura.Runtime.Navigation
         [SerializeField] private string destinationName = "Florería 'El Jazmín'";
 
         [Tooltip("Mensaje de éxito que verá el jugador")]
-        [SerializeField] private string completionMessage = "¡Llegaste a tu destino a salvo!";
+        [SerializeField] private string completionMessage = "Llegaste a tu destino a salvo.";
 
         [Header("Estado")]
         [SerializeField] private bool hasReachedDestination = false;
@@ -53,26 +54,33 @@ namespace RutaSegura.Runtime.Navigation
 
         private void OnGUI()
         {
-            // UI provisional en pantalla para feedback inmediato durante el prototipo
+            // UI en pantalla para feedback de éxito
             if (hasReachedDestination)
             {
                 var originalColor = GUI.color;
-                GUI.color = Color.green;
+                GUI.color = new Color(0.08f, 0.10f, 0.14f, 0.94f);
 
-                var rect = new Rect(Screen.width / 2f - 220f, 60f, 440f, 90f);
-                var style = new GUIStyle(GUI.skin.box)
+                var rect = new Rect(Screen.width / 2f - 210f, 60f, 420f, 85f);
+                GUI.Box(rect, GUIContent.none);
+
+                // Borde superior verde esmeralda
+                GUI.color = new Color(0.2f, 0.85f, 0.4f, 0.95f);
+                GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 2f), Texture2D.whiteTexture);
+
+                var style = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 18,
+                    fontSize = 15,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true
                 };
+                style.normal.textColor = Color.white;
 
                 string timeInfo = MissionController.Instance != null 
                     ? $"\nTiempo empleado: {MissionController.Instance.ElapsedTime:F1}s" 
                     : "";
 
-                GUI.Box(rect, $"✓ {destinationName}\n{completionMessage}{timeInfo}", style);
+                GUI.Label(rect, $"[ DESTINO ALCANZADO ]\n{destinationName}\n{completionMessage}{timeInfo}", style);
                 GUI.color = originalColor;
             }
         }

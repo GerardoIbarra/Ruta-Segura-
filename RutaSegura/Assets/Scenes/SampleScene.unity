@@ -795,6 +795,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1092731493}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1141665512
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1141665514}
+  - component: {fileID: 1141665513}
+  m_Layer: 0
+  m_Name: Marcador_Ruta_Alternativa
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1141665513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1141665512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a601960fce9e2c4ab894e313baea45f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RutaSegura.Runtime.Navigation.AlternativeRouteMarker
+  routeTitle: Ruta Alternativa Detectada
+  routeSubtitle: "Callej\xF3n Libertad \u2794"
+  isActiveOnStart: 0
+  pulseSpeed: 2.5
+--- !u!4 &1141665514
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1141665512}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3, y: 0.1, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1187018275
 GameObject:
   m_ObjectHideFlags: 0
@@ -897,6 +945,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RutaSegura.Runtime.Events.DynamicRoadblockEvent
   roadblockBarrier: {fileID: 1586419465}
   associatedThreatZone: {fileID: 0}
+  alternativeRouteMarker: {fileID: 1141665513}
   alertNotification: "\U0001F4E2 [ECO URBANO]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas."
   threatSpike: 20
   notificationDuration: 6
@@ -1220,6 +1269,7 @@ GameObject:
   - component: {fileID: 1922078478}
   - component: {fileID: 1922078477}
   - component: {fileID: 1922078476}
+  - component: {fileID: 1922078479}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1273,6 +1323,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1922078479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1922078475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552c82ad0ee0f0b4d8866e04550406ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RutaSegura.Runtime.UI.CardiacBiometricHUD
+  minBPM: 68
+  maxBPM: 148
+  screenOffset: {x: 35, y: 35}
+  widgetSize: {x: 230, y: 78}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1288,3 +1354,4 @@ SceneRoots:
   - {fileID: 1204517163}
   - {fileID: 1922078478}
   - {fileID: 1586419464}
+  - {fileID: 1141665514}

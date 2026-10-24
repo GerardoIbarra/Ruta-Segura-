@@ -1,12 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using System.IO;
 
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Generador de texturas y materiales para la señalética vial de la barricada.
-    /// Crea letreros urbanos creíbles estilo Jalisco (CALLE CERRADA y DESVÍO)
+    /// Generador de texturas y materiales para la seÃ±alÃ©tica vial de la barricada.
+    /// Crea letreros urbanos creÃ­bles estilo Jalisco (CALLE CERRADA y DESVÃO)
     /// inspirados directamente en el prototipo en video del usuario.
     /// </summary>
     public static class RoadSignTextureGenerator
@@ -14,7 +14,7 @@ namespace RutaSegura.Editor
         private const string TexturesFolder = "Assets/_Project/Textures";
         private const string MaterialsFolder = "Assets/_Project/Materials";
 
-        [MenuItem("Tools/Ruta Segura/Generar Señalética Vial (Calle Cerrada y Desvío)")]
+        [MenuItem("Tools/Ruta Segura/Generar SeÃ±alÃ©tica Vial (Calle Cerrada y DesvÃ­o)")]
         public static void GenerateRoadSigns()
         {
             if (!AssetDatabase.IsValidFolder(TexturesFolder))
@@ -30,9 +30,9 @@ namespace RutaSegura.Editor
             string pathCerrada = $"{TexturesFolder}/Tex_CalleCerrada.png";
             GenerateSignTexture(pathCerrada, "CALLE", "CERRADA", drawArrow: false);
 
-            // 2. Generar Textura DESVÍO con flecha
+            // 2. Generar Textura DESVÃO con flecha
             string pathDesvio = $"{TexturesFolder}/Tex_Desvio.png";
-            GenerateSignTexture(pathDesvio, "DESVÍO", "➔", drawArrow: true);
+            GenerateSignTexture(pathDesvio, "DESVIO", "", drawArrow: true);
 
             AssetDatabase.Refresh();
 
@@ -42,14 +42,14 @@ namespace RutaSegura.Editor
             CreateSignMaterial("M_Placa_CalleCerrada", pathCerrada, urpShader);
             CreateSignMaterial("M_Placa_Desvio", pathDesvio, urpShader);
 
-            // 4. Material para Cono de Tráfico
+            // 4. Material para Cono de TrÃ¡fico
             CreateConeMaterial("M_Cono_Trafico", urpShader);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             EditorUtility.DisplayDialog("Ruta Segura",
-                "¡Señalética vial urbana generada con éxito!\n\nMateriales listos en:\n• M_Placa_CalleCerrada\n• M_Placa_Desvio\n• M_Cono_Trafico",
+                "Â¡SeÃ±alÃ©tica vial urbana generada con Ã©xito!\n\nMateriales listos en:\nâ€¢ M_Placa_CalleCerrada\nâ€¢ M_Placa_Desvio\nâ€¢ M_Cono_Trafico",
                 "Aceptar");
         }
 
@@ -61,14 +61,14 @@ namespace RutaSegura.Editor
 
             Color yellowBg = new Color(0.96f, 0.73f, 0.08f); // Amarillo vial reflectante
             Color borderBlack = new Color(0.10f, 0.10f, 0.12f); // Negro asfalto
-            Color boltColor = new Color(0.35f, 0.35f, 0.38f);   // Tornillo metálico
+            Color boltColor = new Color(0.35f, 0.35f, 0.38f);   // Tornillo metÃ¡lico
 
             // Rellenar fondo con textura de vinilo ligeramente texturizado
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
-                    // Pequeña variación de ruido para que no parezca vectorial plano
+                    // PequeÃ±a variaciÃ³n de ruido para que no parezca vectorial plano
                     float noise = (Mathf.PerlinNoise(x * 0.05f, y * 0.05f) - 0.5f) * 0.04f;
                     Color baseCol = new Color(yellowBg.r + noise, yellowBg.g + noise, yellowBg.b + noise, 1f);
 
@@ -77,7 +77,7 @@ namespace RutaSegura.Editor
                     {
                         tex.SetPixel(x, y, borderBlack);
                     }
-                    // Borde interno estilizado de señalética oficial
+                    // Borde interno estilizado de seÃ±alÃ©tica oficial
                     else if ((x >= 20 && x <= 26) || (x >= w - 26 && x <= w - 20) ||
                              (y >= 20 && y <= 26) || (y >= h - 26 && y <= h - 20))
                     {
@@ -97,7 +97,7 @@ namespace RutaSegura.Editor
                 }
             }
 
-            // Dibujar tipografía stencil de bloque negra directamente en los píxeles
+            // Dibujar tipografÃ­a stencil de bloque negra directamente en los pÃ­xeles
             if (!drawArrow)
             {
                 // Letrero: CALLE CERRADA
@@ -106,7 +106,7 @@ namespace RutaSegura.Editor
             }
             else
             {
-                // Letrero: DESVÍO con flecha
+                // Letrero: DESVÃO con flecha
                 DrawCenteredBlockText(tex, "DESVIO", yCenter: 160, charHeight: 52, charWidth: 32, spacing: 8, borderBlack);
                 DrawThickArrow(tex, xCenter: w / 2, yCenter: 88, arrowLength: 120, borderBlack);
             }
@@ -225,7 +225,7 @@ namespace RutaSegura.Editor
                     FillRect(tex, x + 4, y, w - 8, t, col); // Abajo
                     break;
                 case 'I':
-                case 'Í':
+                case 'Ã':
                     FillRect(tex, x + w / 2 - t / 2, y, t, h, col);
                     FillRect(tex, x + 4, y + h - t, w - 8, t, col);
                     FillRect(tex, x + 4, y, w - 8, t, col);

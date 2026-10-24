@@ -5,15 +5,16 @@ namespace RutaSegura.Runtime.Navigation
     /// <summary>
     /// Marcador holográfico / AR proyectado sobre el asfalto.
     /// Replicado según el prototipo en video del usuario:
-    /// '📍 Ruta Alternativa Detectada - Callejón Libertad'.
+    /// 'Ruta Alternativa Detectada - Callejón Libertad'.
     /// Se activa cuando ocurre el bloqueo para guiar al jugador.
+    /// Diseñado con estética sobria y profesional de videojuego, sin emojis.
     /// </summary>
     [AddComponentMenu("Ruta Segura/Navigation/Alternative Route Marker")]
     public class AlternativeRouteMarker : MonoBehaviour
     {
         [Header("Contenido")]
         [SerializeField] private string routeTitle = "Ruta Alternativa Detectada";
-        [SerializeField] private string routeSubtitle = "Callejón Libertad ➔";
+        [SerializeField] private string routeSubtitle = "Callejón Libertad ->";
 
         [Header("Visibilidad")]
         [SerializeField] private bool isActiveOnStart = false;
@@ -74,43 +75,43 @@ namespace RutaSegura.Runtime.Navigation
             float guiY = Screen.height - screenPos.y;
 
             // Dibujar círculo/anillo holográfico en el suelo
-            float ringSize = 48f * pulse;
+            float ringSize = 44f * pulse;
             GUI.color = new Color(0.15f, 0.85f, 0.95f, currentAlpha * 0.7f);
             GUI.Box(new Rect(guiX - ringSize / 2f, guiY - ringSize / 2f, ringSize, ringSize), GUIContent.none);
 
             // Tarjeta de información holográfica
-            float cardW = 240f;
-            float cardH = 54f;
+            float cardW = 230f;
+            float cardH = 50f;
             float cardX = guiX - cardW / 2f;
-            float cardY = guiY - cardH - 25f;
+            float cardY = guiY - cardH - 20f;
 
             // Fondo semitransparente oscuro con borde cian brillante
             GUI.color = new Color(0.04f, 0.08f, 0.12f, currentAlpha * 0.92f);
             GUI.Box(new Rect(cardX, cardY, cardW, cardH), GUIContent.none);
 
-            // Borde cian
+            // Borde cian superior
             GUI.color = new Color(0.2f, 0.9f, 1f, currentAlpha);
             GUI.DrawTexture(new Rect(cardX, cardY, cardW, 2f), Texture2D.whiteTexture);
 
-            // Icono de Pin y Título
+            // Título
             var titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 11,
+                fontSize = 10,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
             titleStyle.normal.textColor = new Color(0.25f, 0.95f, 1f, currentAlpha);
-            GUI.Label(new Rect(cardX, cardY + 5f, cardW, 18f), $"📍 {routeTitle.ToUpper()}", titleStyle);
+            GUI.Label(new Rect(cardX, cardY + 4f, cardW, 16f), $"[ {routeTitle.ToUpper()} ]", titleStyle);
 
             // Subtítulo con dirección
             var subStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 13,
+                fontSize = 12,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
             subStyle.normal.textColor = new Color(1f, 1f, 1f, currentAlpha);
-            GUI.Label(new Rect(cardX, cardY + 24f, cardW, 22f), routeSubtitle, subStyle);
+            GUI.Label(new Rect(cardX, cardY + 22f, cardW, 20f), routeSubtitle, subStyle);
 
             GUI.color = Color.white;
         }
