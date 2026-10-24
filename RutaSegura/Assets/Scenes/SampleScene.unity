@@ -946,7 +946,7 @@ MonoBehaviour:
   roadblockBarrier: {fileID: 1586419465}
   associatedThreatZone: {fileID: 0}
   alternativeRouteMarker: {fileID: 1141665513}
-  alertNotification: "\U0001F4E2 [ECO URBANO]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas."
+  alertNotification: "[ECO URBANO]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas."
   threatSpike: 20
   notificationDuration: 6
 --- !u!65 &1204517162
