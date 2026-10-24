@@ -5,8 +5,8 @@ using UnityEditor.SceneManagement;
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Ensamblador del entorno urbano solido y continuo de Guadalajara (Av. Juarez y Calle Galeana).
-    /// Utiliza manzanas urbanas completas sin huecos, banqueta integrada y colisiones precisas.
+    /// Ensamblador del entorno urbano solido y horizontal de Guadalajara (Av. Juarez y Calle Galeana).
+    /// Utiliza manzanas urbanas continuas horizontales en el piso, banqueta integrada y MeshColliders precisos.
     /// </summary>
     public static class GuadalajaraStreetBuilder
     {
@@ -51,15 +51,15 @@ namespace RutaSegura.Editor
 
             // 4. Crear Contenedor Raiz Limpio
             GameObject root = new GameObject("Entorno_Guadalajara");
-            Undo.RegisterCreatedObjectUndo(root, "Crear Entorno Guadalajara Solido");
+            Undo.RegisterCreatedObjectUndo(root, "Crear Entorno Guadalajara Horizontal");
 
-            // 5. Instanciar Bloques Maestros (todos encajan perfectamente en el origen 0, 0, 0)
+            // 5. Instanciar Bloques Maestros (encajan horizontalmente en el piso en 0, 0, 0)
             InstantiateMasterBlock(fbCalzada, "Calzada_Asfalto_Completa", root.transform, Vector3.zero);
             InstantiateMasterBlock(fbNorte, "Manzana_Juarez_Norte", root.transform, Vector3.zero);
             InstantiateMasterBlock(fbSur, "Manzana_Juarez_Sur_Esquina", root.transform, Vector3.zero);
             InstantiateMasterBlock(fbFloreria, "Manzana_Floreria_Destino", root.transform, Vector3.zero);
 
-            // 6. Colocar al Jugador en el inicio de la avenida
+            // 6. Colocar al Jugador en el inicio de la calzada
             var player = GameObject.Find("Player");
             if (player != null)
             {
@@ -162,7 +162,7 @@ namespace RutaSegura.Editor
             // 10. Guardar la escena
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Manzanas urbanas sólidas ensambladas con éxito.");
+            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Manzanas urbanas horizontales ensambladas con éxito.");
         }
 
         private static void InstantiateMasterBlock(GameObject prefab, string name, Transform parent, Vector3 localPos)
@@ -174,12 +174,15 @@ namespace RutaSegura.Editor
             obj.transform.localPosition = localPos;
             obj.transform.localRotation = Quaternion.identity;
 
-            // Asegurar MeshCollider para colisión sólida con banquetas y muros
-            var meshFilter = obj.GetComponentInChildren<MeshFilter>();
-            if (meshFilter != null && obj.GetComponent<Collider>() == null && obj.GetComponentInChildren<Collider>() == null)
+            // Asegurar MeshCollider en cada malla para colisión sólida en el piso y muros
+            var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
+            foreach (var mf in meshFilters)
             {
-                var col = obj.AddComponent<MeshCollider>();
-                col.sharedMesh = meshFilter.sharedMesh;
+                if (mf.GetComponent<Collider>() == null)
+                {
+                    var col = mf.gameObject.AddComponent<MeshCollider>();
+                    col.sharedMesh = mf.sharedMesh;
+                }
             }
         }
     }
