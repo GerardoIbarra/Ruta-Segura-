@@ -14,7 +14,7 @@ namespace RutaSegura.Runtime.Navigation
     {
         [Header("Contenido")]
         [SerializeField] private string routeTitle = "Ruta Alternativa Detectada";
-        [SerializeField] private string routeSubtitle = "Callejón Libertad ->";
+        [SerializeField] private string routeSubtitle = "Calle Galeana ->";
 
         [Header("Visibilidad")]
         [SerializeField] private bool isActiveOnStart = false;

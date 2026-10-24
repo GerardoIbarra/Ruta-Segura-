@@ -8,16 +8,16 @@ using RutaSegura.Runtime.Events;
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Automatización completa de la escena para configurar todos los componentes,
-    /// referencias y señalética sin necesidad de trabajo manual en el inspector.
-    /// Se ejecuta automáticamente al cargar el proyecto o mediante el menú Tools.
+    /// Automatizacion completa de la escena para configurar todos los componentes,
+    /// referencias y senaletica sin necesidad de trabajo manual en el inspector.
+    /// Se ejecuta automaticamente al cargar el proyecto o mediante el menu Tools.
     /// </summary>
     [InitializeOnLoad]
     public static class AutoSceneConfigurator
     {
         static AutoSceneConfigurator()
         {
-            // Ejecutar automáticamente tras compilar en Unity
+            // Ejecutar automaticamente tras compilar en Unity
             EditorApplication.delayCall += ExecuteAutoSetupSilent;
         }
 
@@ -39,10 +39,17 @@ namespace RutaSegura.Editor
 
             bool modified = false;
 
-            // 1. Generar texturas y materiales de señalética vial
+            // 1. Generar texturas y materiales de senaletica vial
             RoadSignTextureGenerator.GenerateRoadSigns();
 
-            // 2. Configurar GameManager con CardiacBiometricHUD
+            // 2. Construir entorno urbano real de Guadalajara si no existe o actualizarlo
+            if (GameObject.Find("Entorno_Guadalajara") == null)
+            {
+                GuadalajaraStreetBuilder.BuildGuadalajaraStreet();
+                modified = true;
+            }
+
+            // 3. Configurar GameManager con CardiacBiometricHUD
             var gmObj = GameObject.Find("GameManager");
             if (gmObj != null)
             {
@@ -50,22 +57,22 @@ namespace RutaSegura.Editor
                 {
                     Undo.AddComponent<CardiacBiometricHUD>(gmObj);
                     modified = true;
-                    Debug.Log("<color=green>[AUTO-SETUP]</color> CardiacBiometricHUD añadido a GameManager.");
+                    Debug.Log("<color=green>[AUTO-SETUP]</color> CardiacBiometricHUD anadido a GameManager.");
                 }
             }
 
-            // 3. Crear o encontrar el Marcador AR de Ruta Alternativa
+            // 4. Crear o encontrar el Marcador AR de Ruta Alternativa
             var markerObj = GameObject.Find("Marcador_Ruta_Alternativa");
             AlternativeRouteMarker markerComponent = null;
 
             if (markerObj == null)
             {
                 markerObj = new GameObject("Marcador_Ruta_Alternativa");
-                markerObj.transform.position = new Vector3(3f, 0.1f, 5f);
+                markerObj.transform.position = new Vector3(2.5f, 0.1f, 5.2f);
                 markerComponent = markerObj.AddComponent<AlternativeRouteMarker>();
                 Undo.RegisterCreatedObjectUndo(markerObj, "Crear Marcador AR");
                 modified = true;
-                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en el asfalto (X: 3, Z: 5).");
+                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en el asfalto (X: 2.5, Z: 5.2).");
             }
             else
             {
@@ -77,7 +84,7 @@ namespace RutaSegura.Editor
                 }
             }
 
-            // 4. Conectar el evento de cierre al marcador y a la valla
+            // 5. Conectar el evento de cierre al marcador y a la valla
             var triggerCierre = Object.FindFirstObjectByType<DynamicRoadblockEvent>();
             var vallaObj = GameObject.Find("SM_Valla_Bloqueo");
 
@@ -125,7 +132,7 @@ namespace RutaSegura.Editor
                 so.ApplyModifiedProperties();
             }
 
-            // 5. Guardar la escena si hubo cambios
+            // 6. Guardar la escena si hubo cambios
             if (modified)
             {
                 EditorSceneManager.MarkSceneDirty(scene);
@@ -136,10 +143,11 @@ namespace RutaSegura.Editor
             if (showDialog)
             {
                 EditorUtility.DisplayDialog("Ruta Segura", 
-                    "Configuración completada con éxito:\n\n" +
-                    "• HUD biométrico de pulso activado en GameManager\n" +
-                    "• Marcador AR proyectado en asfalto conectado\n" +
-                    "• Señalética vial y valla vinculadas\n\n" +
+                    "Configuracion completada con exito:\n\n" +
+                    "- Entorno urbano de Guadalajara ensamblado\n" +
+                    "- HUD biometrico de pulso activado en GameManager\n" +
+                    "- Marcador AR proyectado en asfalto conectado\n" +
+                    "- Senaletica vial y valla vinculadas\n\n" +
                     "Presiona Play para probar.", "Aceptar");
             }
         }
