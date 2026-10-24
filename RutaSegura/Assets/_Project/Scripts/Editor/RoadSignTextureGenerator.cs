@@ -225,7 +225,6 @@ namespace RutaSegura.Editor
                     FillRect(tex, x + 4, y, w - 8, t, col); // Abajo
                     break;
                 case 'I':
-                case 'Ã':
                     FillRect(tex, x + w / 2 - t / 2, y, t, h, col);
                     FillRect(tex, x + 4, y + h - t, w - 8, t, col);
                     FillRect(tex, x + 4, y, w - 8, t, col);
