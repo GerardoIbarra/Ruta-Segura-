@@ -9,6 +9,7 @@ namespace RutaSegura.Runtime.Threat
     /// Sistema de cálculo de riesgo contextual según la Sección 4.4 del GDD.
     /// Administra una escala determinista de 0 a 100, transiciones de estado
     /// y condición de fracaso por sobreexposición.
+    /// Diseñado con estética sobria y profesional de videojuego, sin emojis.
     /// </summary>
     [AddComponentMenu("Ruta Segura/Threat/Threat System")]
     public class ThreatSystem : MonoBehaviour
@@ -30,9 +31,6 @@ namespace RutaSegura.Runtime.Threat
 
         [Header("Condición de Fracaso")]
         [SerializeField] private bool isMissionFailed = false;
-
-        [Header("HUD Visual en Prototipo")]
-        [SerializeField] private bool showDebugHUD = true;
 
         // Tasa activa de cambio aplicada por zonas actuales
         private float activeThreatRate = 0f;
@@ -183,67 +181,31 @@ namespace RutaSegura.Runtime.Threat
 
         private void OnGUI()
         {
-            if (!showDebugHUD) return;
-
-            // HUD minimalista en esquina superior derecha
-            float width = 220f;
-            float height = 55f;
-            float x = Screen.width - width - 20f;
-            float y = 20f;
-
-            Color levelColor = GetLevelColor(currentLevel);
-
-            // Fondo del widget
-            GUI.color = new Color(0.1f, 0.1f, 0.12f, 0.85f);
-            GUI.Box(new Rect(x, y, width, height), GUIContent.none);
-
-            // Barra de progreso de amenaza
-            float barPadding = 8f;
-            float barWidth = width - (barPadding * 2);
-            float barHeight = 10f;
-            float barY = y + 36f;
-
-            // Fondo de la barra
-            GUI.color = new Color(0.2f, 0.2f, 0.25f, 1f);
-            GUI.DrawTexture(new Rect(x + barPadding, barY, barWidth, barHeight), Texture2D.whiteTexture);
-
-            // Barra llena
-            GUI.color = levelColor;
-            float fillWidth = (currentThreat / 100f) * barWidth;
-            GUI.DrawTexture(new Rect(x + barPadding, barY, fillWidth, barHeight), Texture2D.whiteTexture);
-
-            // Texto descriptivo del estado
-            var labelStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontStyle = FontStyle.Bold,
-                fontSize = 13,
-                alignment = TextAnchor.MiddleLeft
-            };
-            labelStyle.normal.textColor = levelColor;
-
-            string statusText = $"Tensión: {currentLevel} ({currentThreat:F0}%)";
-            GUI.Label(new Rect(x + barPadding, y + 8f, barWidth, 22f), statusText, labelStyle);
-
-            GUI.color = Color.white;
-
-            // Pantalla de Fracaso si se alcanza el 100% de amenaza
+            // Pantalla de Fracaso si se alcanza el 100% de amenaza (sin emojis, estilo juego sobrio)
             if (isMissionFailed)
             {
                 var originalColor = GUI.color;
-                GUI.color = new Color(0.1f, 0.05f, 0.05f, 0.85f);
+                GUI.color = new Color(0.06f, 0.04f, 0.05f, 0.90f);
                 GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
 
-                var boxRect = new Rect(Screen.width / 2f - 290f, Screen.height / 2f - 90f, 580f, 180f);
-                GUI.color = new Color(0.9f, 0.2f, 0.2f, 0.95f);
-                var failureStyle = new GUIStyle(GUI.skin.box)
+                var boxRect = new Rect(Screen.width / 2f - 270f, Screen.height / 2f - 85f, 540f, 170f);
+                GUI.color = new Color(0.12f, 0.06f, 0.06f, 0.96f);
+                GUI.Box(boxRect, GUIContent.none);
+
+                // Borde superior rojo de advertencia
+                GUI.color = new Color(0.92f, 0.2f, 0.2f, 1f);
+                GUI.DrawTexture(new Rect(boxRect.x, boxRect.y, boxRect.width, 3f), Texture2D.whiteTexture);
+
+                var failureStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 20,
+                    fontSize = 18,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true
                 };
+                failureStyle.normal.textColor = Color.white;
 
-                GUI.Box(boxRect, "⚠️ MISIÓN FALLIDA\n\nQuedaste atrapado en el tumulto / corte de calle.\n\nPresiona [ R ] para reintentar", failureStyle);
+                GUI.Label(boxRect, "[ MISIÓN FALLIDA ]\n\nQuedaste atrapado en el tumulto / corte de calle.\n\nPresiona [ R ] para reintentar", failureStyle);
                 GUI.color = originalColor;
             }
         }

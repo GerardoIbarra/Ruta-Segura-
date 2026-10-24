@@ -1,12 +1,13 @@
 using UnityEngine;
 using RutaSegura.Runtime.Threat;
+using RutaSegura.Runtime.Navigation;
 
 namespace RutaSegura.Runtime.Events
 {
     /// <summary>
     /// Evento dinámico que altera las condiciones de una ruta en tiempo real.
     /// Simula el cierre repentino de una calle por vallas o cuerpos de seguridad,
-    /// obligando al jugador a adaptarse y buscar una ruta alternativa.
+    /// activa el marcador holográfico de ruta alternativa y obliga al jugador a adaptarse.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     [AddComponentMenu("Ruta Segura/Events/Dynamic Roadblock Event")]
@@ -19,9 +20,12 @@ namespace RutaSegura.Runtime.Events
         [Tooltip("Zona de amenaza que se activará o intensificará")]
         [SerializeField] private ThreatZone associatedThreatZone;
 
+        [Tooltip("Marcador AR que aparecerá proyectado en el asfalto frente al callejón")]
+        [SerializeField] private AlternativeRouteMarker alternativeRouteMarker;
+
         [Header("Mensaje Diegético (Eco Urbano / Alerta)")]
         [TextArea(2, 4)]
-        [SerializeField] private string alertNotification = "📢 [ECO URBANO]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas.";
+        [SerializeField] private string alertNotification = "[ECO URBANO - ALERTA VIAL]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas.";
 
         [Tooltip("Aumento inmediato de amenaza al presenciar el cierre")]
         [SerializeField] private float threatSpike = 20f;
@@ -70,6 +74,12 @@ namespace RutaSegura.Runtime.Events
                 roadblockBarrier.SetActive(true);
             }
 
+            // Activar el marcador AR en el suelo como en el video de referencia
+            if (alternativeRouteMarker != null)
+            {
+                alternativeRouteMarker.ActivateMarker();
+            }
+
             // Aplicar pico de tensión al jugador
             if (ThreatSystem.Instance != null && threatSpike > 0f)
             {
@@ -84,23 +94,29 @@ namespace RutaSegura.Runtime.Events
             // Banner de notificación en la parte superior central simulando alerta del móvil
             if (notificationTimer > 0f)
             {
-                float bannerWidth = 550f;
-                float bannerHeight = 65f;
+                float bannerWidth = 520f;
+                float bannerHeight = 56f;
                 float x = (Screen.width - bannerWidth) / 2f;
-                float y = 15f;
+                float y = 18f;
 
                 var origColor = GUI.color;
-                GUI.color = new Color(0.95f, 0.4f, 0.1f, 0.95f);
+                GUI.color = new Color(0.10f, 0.12f, 0.16f, 0.94f);
+                GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), GUIContent.none);
 
-                var boxStyle = new GUIStyle(GUI.skin.box)
+                // Borde naranja de advertencia
+                GUI.color = new Color(0.95f, 0.45f, 0.12f, 0.95f);
+                GUI.DrawTexture(new Rect(x, y, bannerWidth, 2f), Texture2D.whiteTexture);
+
+                var boxStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 14,
+                    fontSize = 12,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true
                 };
+                boxStyle.normal.textColor = new Color(0.98f, 0.70f, 0.30f);
 
-                GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), alertNotification, boxStyle);
+                GUI.Label(new Rect(x + 12f, y + 4f, bannerWidth - 24f, bannerHeight - 8f), alertNotification, boxStyle);
                 GUI.color = origColor;
             }
         }
