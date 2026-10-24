@@ -42,12 +42,9 @@ namespace RutaSegura.Editor
             // 1. Generar texturas y materiales de senaletica vial
             RoadSignTextureGenerator.GenerateRoadSigns();
 
-            // 2. Construir entorno urbano real de Guadalajara si no existe o actualizarlo
-            if (GameObject.Find("Entorno_Guadalajara") == null)
-            {
-                GuadalajaraStreetBuilder.BuildGuadalajaraStreet();
-                modified = true;
-            }
+            // 2. Construir y alinear entorno urbano real de Guadalajara
+            GuadalajaraStreetBuilder.BuildGuadalajaraStreet();
+            modified = true;
 
             // 3. Configurar GameManager con CardiacBiometricHUD
             var gmObj = GameObject.Find("GameManager");
@@ -68,14 +65,15 @@ namespace RutaSegura.Editor
             if (markerObj == null)
             {
                 markerObj = new GameObject("Marcador_Ruta_Alternativa");
-                markerObj.transform.position = new Vector3(2.5f, 0.1f, 5.2f);
+                markerObj.transform.position = new Vector3(4.0f, 0.1f, 8.0f);
                 markerComponent = markerObj.AddComponent<AlternativeRouteMarker>();
                 Undo.RegisterCreatedObjectUndo(markerObj, "Crear Marcador AR");
                 modified = true;
-                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en el asfalto (X: 2.5, Z: 5.2).");
+                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en el asfalto (X: 4.0, Z: 8.0).");
             }
             else
             {
+                markerObj.transform.position = new Vector3(4.0f, 0.1f, 8.0f);
                 markerComponent = markerObj.GetComponent<AlternativeRouteMarker>();
                 if (markerComponent == null)
                 {
@@ -144,7 +142,7 @@ namespace RutaSegura.Editor
             {
                 EditorUtility.DisplayDialog("Ruta Segura", 
                     "Configuracion completada con exito:\n\n" +
-                    "- Entorno urbano de Guadalajara ensamblado\n" +
+                    "- Entorno urbano de Guadalajara ensamblado con proporciones reales\n" +
                     "- HUD biometrico de pulso activado en GameManager\n" +
                     "- Marcador AR proyectado en asfalto conectado\n" +
                     "- Senaletica vial y valla vinculadas\n\n" +
