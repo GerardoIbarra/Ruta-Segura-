@@ -476,21 +476,6 @@ def make_piso():
         box(p, (rng_p.uniform(0.22, 0.34), 0.008, rng_p.uniform(0.18, 0.28)),
             (rng_p.uniform(27.4, 31.6), 0.014, rng_p.uniform(24.0, 68.0)), m['cartulina'])
 
-    # Charcos reflectantes sobre asfalto y callejones
-    puddles = [
-        ((-3.8, 28.0), (2.0, 0.008, 3.2)),
-        ((3.6, 46.5), (1.8, 0.008, 2.8)),
-        ((-1.2, 65.5), (2.4, 0.008, 2.2)),
-        ((3.8, 75.5), (2.1, 0.008, 2.6)),
-        ((16.5, 72.5), (2.6, 0.008, 1.6)),
-        ((29.5, 53.0), (1.8, 0.008, 2.9)),
-        ((29.5, 30.0), (1.9, 0.008, 2.4)),
-        ((47.0, 13.5), (2.5, 0.008, 1.9)),
-        ((75.0, 16.2), (2.8, 0.008, 2.1)),
-    ]
-    for (px, pz), psz in puddles:
-        box(p, psz, (px, 0.004, pz), m['charco'])
-
     # Pancartas tiradas junto a machuelos en Av. Juarez y Callejon 1
     dropped_signs = [
         (-4.6, 39.0), (4.6, 56.0), (-4.5, 69.5), (4.4, 74.2), (13.0, 74.3), (26.0, 70.6)

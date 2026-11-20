@@ -96,6 +96,22 @@ namespace RutaSegura.EditorTools
             Check(fails, passes, GameObject.Find("Trafico_Detenido") != null, "Trafico_Detenido presente");
             Check(fails, passes, GameObject.Find("Mobiliario_Urbano") != null, "Mobiliario_Urbano presente");
             Check(fails, passes, GameObject.Find("Vegetacion_Urbana") != null, "Vegetacion_Urbana presente");
+            Check(fails, passes, GameObject.Find("Reflection_Probes") != null, "Reflection_Probes presente");
+            Check(fails, passes, RenderSettings.skybox != null, "Skybox crepuscular asignado en RenderSettings");
+
+            string[] customShaders =
+            {
+                "RutaSegura/WetAsphaltPuddles",
+                "RutaSegura/InteriorMappingWindow",
+                "RutaSegura/UrbanWeatheringWall",
+                "RutaSegura/UrbanFoliageWind",
+                "RutaSegura/VolumetricLightHalo",
+                "RutaSegura/GuadalajaraSunsetSky"
+            };
+            foreach (string shName in customShaders)
+            {
+                Check(fails, passes, Shader.Find(shName) != null, $"Shader compilado: {shName}");
+            }
 
             // 5. AudioListener unico e InputSystem UI
             var listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude);

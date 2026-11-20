@@ -50,35 +50,50 @@ namespace RutaSegura.Editor
             var texCortina = LoadTextureSet("CortinaMetalica");
 
             var urpShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var complexLit = Shader.Find("Universal Render Pipeline/Complex Lit") ?? urpShader;
+            var asphaltShader = Shader.Find("RutaSegura/WetAsphaltPuddles") ?? urpShader;
+            var wallShader = Shader.Find("RutaSegura/UrbanWeatheringWall") ?? urpShader;
+            var windowShader = Shader.Find("RutaSegura/InteriorMappingWindow") ?? urpShader;
+            var foliageShader = Shader.Find("RutaSegura/UrbanFoliageWind") ?? urpShader;
+            var haloShader = Shader.Find("RutaSegura/VolumetricLightHalo");
+            var skyShader = Shader.Find("RutaSegura/GuadalajaraSunsetSky");
 
-            // Superficies viales y piso (asfalto ligeramente humedo para reflejar farolas y torretas)
-            SetMat("M_Asfalto_Calle", Color.white, 0.42f, 0.05f, texAsfalto, 1.45f, urpShader);
-            SetMat("M_Concreto_Callejon", Color.white, 0.16f, 0f, texCallejon, 1.35f, urpShader);
-            SetMat("M_Concreto_Banqueta", Color.white, 0.24f, 0f, texBanqueta, 1.05f, urpShader);
+            // Superficies viales y piso (asfalto y concreto con charcos procedurales y micro-ondas)
+            var matAsfalto = SetMat("M_Asfalto_Calle", Color.white, 0.28f, 0.04f, texAsfalto, 1.45f, asphaltShader);
+            ConfigureAsphalt(matAsfalto, drySmooth: 0.26f, wetSmooth: 0.95f, puddleThreshold: 0.54f);
+            var matCallejon = SetMat("M_Concreto_Callejon", Color.white, 0.18f, 0.02f, texCallejon, 1.35f, asphaltShader);
+            ConfigureAsphalt(matCallejon, drySmooth: 0.16f, wetSmooth: 0.92f, puddleThreshold: 0.60f);
+
+            var matBanqueta = SetMat("M_Concreto_Banqueta", Color.white, 0.24f, 0f, texBanqueta, 1.05f, wallShader);
+            if (matBanqueta != null && matBanqueta.HasProperty("_GrimeStrength")) matBanqueta.SetFloat("_GrimeStrength", 0.12f);
+
             SetMat("M_Machuelo_Guarnicion", new Color(0.92f, 0.91f, 0.85f), 0.22f, 0f, texBanqueta, 0.85f, urpShader);
             SetMat("M_Paso_Cebra_Blanco", new Color(0.86f, 0.86f, 0.82f), 0.24f, 0f, texAsfalto, 0.70f, urpShader);
             SetMat("M_Linea_Amarilla", new Color(0.86f, 0.66f, 0.14f), 0.24f, 0f, texAsfalto, 0.65f, urpShader);
             SetMat("M_Coladera_Hierro", new Color(0.14f, 0.14f, 0.15f), 0.48f, 0.78f, texBanqueta, 0.95f, urpShader);
 
-            // Arquitectura y fachadas de Guadalajara (tonos desgastados menos pastel para evitar aspecto plastilina)
-            SetMat("M_Muro_Cantera", Color.white, 0.14f, 0f, texCantera, 1.35f, urpShader);
-            SetMat("M_Muro_Ladrillo", Color.white, 0.15f, 0f, texLadrillo, 1.55f, urpShader);
-            SetMat("M_Muro_LadrilloOscuro", new Color(0.62f, 0.56f, 0.54f), 0.14f, 0f, texLadrillo, 1.55f, urpShader);
-            SetMat("M_Muro_Terracota", new Color(0.62f, 0.30f, 0.22f), 0.14f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_AmarilloColonial", new Color(0.75f, 0.60f, 0.28f), 0.16f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_BlancoColonial", new Color(0.80f, 0.78f, 0.73f), 0.18f, 0f, texEstuco, 1.00f, urpShader);
-            SetMat("M_Muro_Ocre", new Color(0.66f, 0.48f, 0.30f), 0.15f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_RosaDeslavado", new Color(0.70f, 0.48f, 0.48f), 0.15f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_VerdeAgua", new Color(0.47f, 0.59f, 0.54f), 0.15f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_AzulAnil", new Color(0.37f, 0.46f, 0.56f), 0.16f, 0f, texEstuco, 1.05f, urpShader);
-            SetMat("M_Muro_GrisCemento", new Color(0.68f, 0.67f, 0.64f), 0.18f, 0f, texCallejon, 1.15f, urpShader);
+            // Arquitectura y fachadas con weathering en world-space (humedad base + escurrimientos)
+            SetMat("M_Muro_Cantera", Color.white, 0.14f, 0f, texCantera, 1.35f, wallShader);
+            SetMat("M_Muro_Ladrillo", Color.white, 0.15f, 0f, texLadrillo, 1.55f, wallShader);
+            SetMat("M_Muro_LadrilloOscuro", new Color(0.62f, 0.56f, 0.54f), 0.14f, 0f, texLadrillo, 1.55f, wallShader);
+            SetMat("M_Muro_Terracota", new Color(0.62f, 0.30f, 0.22f), 0.14f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_AmarilloColonial", new Color(0.75f, 0.60f, 0.28f), 0.16f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_BlancoColonial", new Color(0.80f, 0.78f, 0.73f), 0.18f, 0f, texEstuco, 1.00f, wallShader);
+            SetMat("M_Muro_Ocre", new Color(0.66f, 0.48f, 0.30f), 0.15f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_RosaDeslavado", new Color(0.70f, 0.48f, 0.48f), 0.15f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_VerdeAgua", new Color(0.47f, 0.59f, 0.54f), 0.15f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_AzulAnil", new Color(0.37f, 0.46f, 0.56f), 0.16f, 0f, texEstuco, 1.05f, wallShader);
+            SetMat("M_Muro_GrisCemento", new Color(0.68f, 0.67f, 0.64f), 0.18f, 0f, texCallejon, 1.15f, wallShader);
 
-            // Herreria, cortinas y detalles
+            // Herreria, cortinas, ventanas con Interior Mapping y detalles
             SetMat("M_Cortina_Metalica", new Color(0.80f, 0.83f, 0.87f), 0.50f, 0.70f, texCortina, 1.50f, urpShader);
             SetMat("M_Herreria_Negra", new Color(0.08f, 0.08f, 0.10f), 0.55f, 0.80f, default, 0f, urpShader);
             SetMat("M_Madera_Puerta", new Color(0.26f, 0.15f, 0.08f), 0.38f, 0f, texEstuco, 0.65f, urpShader);
-            SetMat("M_Vidrio_Ventana", new Color(0.08f, 0.12f, 0.16f), 0.90f, 0.65f, default, 0f, urpShader);
-            SetMat("M_Cristal_Aparador", new Color(0.16f, 0.28f, 0.34f), 0.92f, 0.85f, default, 0f, urpShader, new Color(0.08f, 0.12f, 0.10f));
+
+            var matVentana = SetMat("M_Vidrio_Ventana", new Color(0.08f, 0.12f, 0.16f), 0.94f, 0.12f, default, 0f, windowShader);
+            ConfigureInteriorWindow(matVentana, litRatio: 0.45f, brightness: 1.15f);
+            var matAparador = SetMat("M_Cristal_Aparador", new Color(0.10f, 0.16f, 0.20f), 0.94f, 0.12f, default, 0f, windowShader);
+            ConfigureInteriorWindow(matAparador, litRatio: 0.78f, brightness: 1.45f);
             SetMat("M_Tinaco_Negro", new Color(0.10f, 0.10f, 0.11f), 0.35f, 0f, default, 0f, urpShader);
             SetMat("M_Minisplit", new Color(0.76f, 0.76f, 0.74f), 0.45f, 0.1f, default, 0f, urpShader);
             SetMat("M_Toldo_Rojo", new Color(0.62f, 0.16f, 0.14f), 0.18f, 0f, default, 0f, urpShader);
@@ -104,8 +119,8 @@ namespace RutaSegura.Editor
             SetMat("M_Uniforme_Policia", new Color(0.08f, 0.10f, 0.16f), 0.28f, 0f, default, 0f, urpShader);
             SetMat("M_Escudo_Policia", new Color(0.30f, 0.34f, 0.38f), 0.78f, 0.35f, default, 0f, urpShader);
             SetMat("M_Casco_Policia", new Color(0.06f, 0.06f, 0.08f), 0.65f, 0.4f, default, 0f, urpShader);
-            SetMat("M_Patrulla_Blanco", new Color(0.82f, 0.82f, 0.84f), 0.72f, 0.4f, default, 0f, urpShader);
-            SetMat("M_Patrulla_Negro", new Color(0.06f, 0.07f, 0.10f), 0.72f, 0.4f, default, 0f, urpShader);
+            SetMat("M_Patrulla_Blanco", new Color(0.82f, 0.82f, 0.84f), 0.72f, 0.4f, default, 0f, complexLit);
+            SetMat("M_Patrulla_Negro", new Color(0.06f, 0.07f, 0.10f), 0.72f, 0.4f, default, 0f, complexLit);
             SetMat("M_Torreta_Roja", new Color(0.90f, 0.10f, 0.10f), 0.85f, 0f, default, 0f, urpShader, new Color(2.0f, 0.15f, 0.15f));
             SetMat("M_Torreta_Azul", new Color(0.10f, 0.25f, 0.95f), 0.85f, 0f, default, 0f, urpShader, new Color(0.15f, 0.45f, 2.2f));
             SetMat("M_Llanta", new Color(0.05f, 0.05f, 0.05f), 0.15f, 0f, default, 0f, urpShader);
@@ -118,22 +133,35 @@ namespace RutaSegura.Editor
             SetMat("M_Piel_Clara", new Color(0.72f, 0.56f, 0.44f), 0.30f, 0f, default, 0f, urpShader);
             SetMat("M_Pantalon_Mezclilla", new Color(0.16f, 0.20f, 0.30f), 0.20f, 0f, default, 0f, urpShader);
 
-            // Trafico detenido, mobiliario urbano, follaje y charcos reflectantes
-            SetMat("M_Auto_Carroceria", new Color(0.72f, 0.74f, 0.76f), 0.78f, 0.55f, default, 0f, urpShader);
-            SetMat("M_Auto_Blanco", new Color(0.86f, 0.86f, 0.84f), 0.80f, 0.35f, default, 0f, urpShader);
-            SetMat("M_Auto_Rojo", new Color(0.58f, 0.12f, 0.12f), 0.80f, 0.45f, default, 0f, urpShader);
-            SetMat("M_Auto_Gris", new Color(0.30f, 0.32f, 0.35f), 0.78f, 0.55f, default, 0f, urpShader);
-            SetMat("M_Auto_Azul", new Color(0.14f, 0.24f, 0.44f), 0.80f, 0.50f, default, 0f, urpShader);
-            SetMat("M_Auto_Taxi", new Color(0.92f, 0.72f, 0.10f), 0.75f, 0.30f, default, 0f, urpShader);
-            SetMat("M_Bus_Verde", new Color(0.12f, 0.42f, 0.26f), 0.62f, 0.25f, default, 0f, urpShader);
-            SetMat("M_Bus_Blanco", new Color(0.86f, 0.86f, 0.82f), 0.62f, 0.20f, default, 0f, urpShader);
+            // Trafico detenido con Clear Coat nativo (Complex Lit), mobiliario, follaje translucido con viento y charcos
+            EnableClearCoat(SetMat("M_Auto_Carroceria", new Color(0.72f, 0.74f, 0.76f), 0.78f, 0.55f, default, 0f, complexLit), 0.85f, 0.92f);
+            EnableClearCoat(SetMat("M_Auto_Blanco", new Color(0.86f, 0.86f, 0.84f), 0.80f, 0.35f, default, 0f, complexLit), 0.85f, 0.92f);
+            EnableClearCoat(SetMat("M_Auto_Rojo", new Color(0.58f, 0.12f, 0.12f), 0.80f, 0.45f, default, 0f, complexLit), 0.90f, 0.94f);
+            EnableClearCoat(SetMat("M_Auto_Gris", new Color(0.30f, 0.32f, 0.35f), 0.78f, 0.55f, default, 0f, complexLit), 0.85f, 0.92f);
+            EnableClearCoat(SetMat("M_Auto_Azul", new Color(0.14f, 0.24f, 0.44f), 0.80f, 0.50f, default, 0f, complexLit), 0.90f, 0.94f);
+            EnableClearCoat(SetMat("M_Auto_Taxi", new Color(0.92f, 0.72f, 0.10f), 0.75f, 0.30f, default, 0f, complexLit), 0.82f, 0.90f);
+            EnableClearCoat(SetMat("M_Bus_Verde", new Color(0.12f, 0.42f, 0.26f), 0.62f, 0.25f, default, 0f, complexLit), 0.65f, 0.84f);
+            EnableClearCoat(SetMat("M_Bus_Blanco", new Color(0.86f, 0.86f, 0.82f), 0.62f, 0.20f, default, 0f, complexLit), 0.65f, 0.84f);
+            EnableClearCoat(AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/M_Patrulla_Blanco.mat"), 0.85f, 0.92f);
+            EnableClearCoat(AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/M_Patrulla_Negro.mat"), 0.85f, 0.92f);
+
             SetMat("M_Faro_Blanco", new Color(1.0f, 0.96f, 0.86f), 0.90f, 0f, default, 0f, urpShader, new Color(1.8f, 1.65f, 1.3f));
             SetMat("M_Luz_Freno_Roja", new Color(0.95f, 0.08f, 0.08f), 0.85f, 0f, default, 0f, urpShader, new Color(2.2f, 0.14f, 0.12f));
             SetMat("M_Luz_Intermitente", new Color(1.0f, 0.62f, 0.05f), 0.85f, 0f, default, 0f, urpShader, new Color(2.2f, 1.25f, 0.08f));
-            SetMat("M_Follaje_Urbano", new Color(0.16f, 0.34f, 0.17f), 0.18f, 0f, texEstuco, 0.55f, urpShader);
-            SetMat("M_Follaje_Oscuro", new Color(0.11f, 0.24f, 0.13f), 0.15f, 0f, texEstuco, 0.55f, urpShader);
+            SetMat("M_Follaje_Urbano", new Color(0.18f, 0.38f, 0.19f), 0.18f, 0f, texEstuco, 0.55f, foliageShader);
+            SetMat("M_Follaje_Oscuro", new Color(0.13f, 0.28f, 0.15f), 0.15f, 0f, texEstuco, 0.55f, foliageShader);
             SetMat("M_Charco_Agua", new Color(0.08f, 0.10f, 0.13f), 0.94f, 0.25f, default, 0f, urpShader);
             SetMat("M_Puesto_Verde", new Color(0.12f, 0.34f, 0.22f), 0.48f, 0.45f, texCortina, 0.65f, urpShader);
+
+            if (haloShader != null)
+            {
+                CreateHaloMaterial("M_Halo_Farola", new Color(1.0f, 0.76f, 0.44f, 0.16f), haloShader);
+                CreateHaloMaterial("M_Halo_Floreria", new Color(0.55f, 1.0f, 0.65f, 0.18f), haloShader);
+            }
+            if (skyShader != null)
+            {
+                CreateSkyboxMaterial("M_Skybox_Guadalajara", skyShader);
+            }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -336,7 +364,7 @@ namespace RutaSegura.Editor
             };
         }
 
-        private static void SetMat(string name, Color color, float smoothness, float metallic, TextureSet tex, float bumpScale, Shader shader, Color? emission = null)
+        private static Material SetMat(string name, Color color, float smoothness, float metallic, TextureSet tex, float bumpScale, Shader shader, Color? emission = null)
         {
             string path = $"{MaterialsFolder}/{name}.mat";
             Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -344,6 +372,10 @@ namespace RutaSegura.Editor
             {
                 mat = new Material(shader);
                 AssetDatabase.CreateAsset(mat, path);
+            }
+            else if (shader != null && mat.shader != shader)
+            {
+                mat.shader = shader;
             }
 
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
@@ -380,6 +412,69 @@ namespace RutaSegura.Editor
             }
 
             mat.enableInstancing = true;
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        private static void ConfigureAsphalt(Material mat, float drySmooth, float wetSmooth, float puddleThreshold)
+        {
+            if (mat == null) return;
+            if (mat.HasProperty("_DrySmoothness")) mat.SetFloat("_DrySmoothness", drySmooth);
+            if (mat.HasProperty("_WetSmoothness")) mat.SetFloat("_WetSmoothness", wetSmooth);
+            if (mat.HasProperty("_PuddleThreshold")) mat.SetFloat("_PuddleThreshold", puddleThreshold);
+            EditorUtility.SetDirty(mat);
+        }
+
+        private static void ConfigureInteriorWindow(Material mat, float litRatio, float brightness)
+        {
+            if (mat == null) return;
+            if (mat.HasProperty("_LitRatio")) mat.SetFloat("_LitRatio", litRatio);
+            if (mat.HasProperty("_InteriorBrightness")) mat.SetFloat("_InteriorBrightness", brightness);
+            EditorUtility.SetDirty(mat);
+        }
+
+        private static void EnableClearCoat(Material mat, float mask, float smoothness)
+        {
+            if (mat == null) return;
+            if (mat.HasProperty("_ClearCoat")) mat.SetFloat("_ClearCoat", 1f);
+            if (mat.HasProperty("_ClearCoatMask")) mat.SetFloat("_ClearCoatMask", mask);
+            if (mat.HasProperty("_ClearCoatSmoothness")) mat.SetFloat("_ClearCoatSmoothness", smoothness);
+            mat.EnableKeyword("_CLEARCOAT");
+            EditorUtility.SetDirty(mat);
+        }
+
+        private static void CreateHaloMaterial(string matName, Color col, Shader haloShader)
+        {
+            string path = $"{MaterialsFolder}/{matName}.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(haloShader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            else if (mat.shader != haloShader)
+            {
+                mat.shader = haloShader;
+            }
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", col);
+            if (mat.HasProperty("_Intensity")) mat.SetFloat("_Intensity", 1f);
+            mat.enableInstancing = true;
+            EditorUtility.SetDirty(mat);
+        }
+
+        private static void CreateSkyboxMaterial(string matName, Shader skyShader)
+        {
+            string path = $"{MaterialsFolder}/{matName}.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(skyShader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            else if (mat.shader != skyShader)
+            {
+                mat.shader = skyShader;
+            }
             EditorUtility.SetDirty(mat);
         }
 

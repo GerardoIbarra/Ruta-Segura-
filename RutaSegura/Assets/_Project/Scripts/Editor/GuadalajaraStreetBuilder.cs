@@ -81,19 +81,23 @@ namespace RutaSegura.Editor
             Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 60f), 180f, $"Farola_{++fi}", true);
             Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 88f), 180f, $"Farola_{++fi}", true);
 
-            // 4. Luces calidas en puntos clave de navegacion y escaparate de la Floreria (sin sombras para 120 FPS)
+            // 4. Luces calidas y halos volumetricos en farolas y Floreria (sin sombras extra para 90-120 FPS)
             var luces = new GameObject("Luces_Guia").transform;
             luces.SetParent(root.transform, false);
             Color warmStreet = new Color(1.0f, 0.78f, 0.48f);
-            AddPointLight(luces, "Luz_Juarez_1", new Vector3(-5.8f, 3.8f, 34f), warmStreet, 15f, 4.2f);
-            AddPointLight(luces, "Luz_Juarez_2", new Vector3(5.8f, 3.8f, 48f), warmStreet, 15f, 4.2f);
-            AddPointLight(luces, "Luz_Juarez_3", new Vector3(-5.8f, 3.8f, 62f), warmStreet, 15f, 4.2f);
-            AddPointLight(luces, "Luz_Callejon_1", new Vector3(6.5f, 3.6f, 71.0f), warmStreet, 14f, 4.0f);
-            AddPointLight(luces, "Luz_Callejon_2", new Vector3(29.5f, 3.6f, 71.5f), warmStreet, 14f, 4.0f);
-            AddPointLight(luces, "Luz_Callejon_Mid", new Vector3(29.5f, 3.6f, 46.0f), warmStreet, 14f, 3.6f);
-            AddPointLight(luces, "Luz_Hospital_Entrada", new Vector3(29.5f, 3.6f, 20.5f), warmStreet, 15f, 4.0f);
-            AddPointLight(luces, "Luz_Hospital_Mid", new Vector3(62.0f, 3.8f, 15.0f), warmStreet, 16f, 4.0f);
-            AddPointLight(luces, "Luz_Floreria_Faro", new Vector3(93.2f, 3.6f, 15.0f), new Color(0.82f, 1.0f, 0.76f), 18f, 5.5f);
+            materialMap.TryGetValue("M_Halo_Farola", out Material haloWarm);
+            materialMap.TryGetValue("M_Halo_Floreria", out Material haloFloreria);
+            Mesh haloConeMesh = GetOrCreateHaloConeMesh();
+
+            AddPointLight(luces, "Luz_Juarez_1", new Vector3(-5.8f, 3.8f, 34f), warmStreet, 15f, 4.2f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Juarez_2", new Vector3(5.8f, 3.8f, 48f), warmStreet, 15f, 4.2f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Juarez_3", new Vector3(-5.8f, 3.8f, 62f), warmStreet, 15f, 4.2f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Callejon_1", new Vector3(6.5f, 3.6f, 71.0f), warmStreet, 14f, 4.0f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Callejon_2", new Vector3(29.5f, 3.6f, 71.5f), warmStreet, 14f, 4.0f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Callejon_Mid", new Vector3(29.5f, 3.6f, 46.0f), warmStreet, 14f, 3.6f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Hospital_Entrada", new Vector3(29.5f, 3.6f, 20.5f), warmStreet, 15f, 4.0f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Hospital_Mid", new Vector3(62.0f, 3.8f, 15.0f), warmStreet, 16f, 4.0f, haloWarm, haloConeMesh);
+            AddPointLight(luces, "Luz_Floreria_Faro", new Vector3(93.2f, 3.6f, 15.0f), new Color(0.82f, 1.0f, 0.76f), 18f, 5.5f, haloFloreria ?? haloWarm, haloConeMesh);
 
             // 5. Barricada de Av. Juarez visible desde el inicio con senaletica vial
             var barricada = new GameObject("SM_Valla_Bloqueo");
@@ -282,6 +286,15 @@ namespace RutaSegura.Editor
             Place(PropsDir, "SM_Semaforo_GDL", semaforos, new Vector3(-5.35f, 0.18f, 18.0f), 180f, "Semaforo_Juarez_Sur", true);
             Place(PropsDir, "SM_Semaforo_GDL", semaforos, new Vector3(32.6f, 0.18f, 20.4f), 90f, "Semaforo_Hospital", true);
 
+            // 11C. Sondas de reflexion proyectadas en caja (OnAwake 128px para charcos, ventanas y Clear Coat sin costo continuo)
+            var probes = new GameObject("Reflection_Probes").transform;
+            probes.SetParent(root.transform, false);
+            AddReflectionProbe(probes, "Probe_Juarez_Sur", new Vector3(0f, 3.2f, 32f), new Vector3(22f, 16f, 44f));
+            AddReflectionProbe(probes, "Probe_Juarez_Norte", new Vector3(0f, 3.2f, 68f), new Vector3(24f, 16f, 42f));
+            AddReflectionProbe(probes, "Probe_Callejon_1", new Vector3(22f, 2.8f, 72.5f), new Vector3(32f, 12f, 14f));
+            AddReflectionProbe(probes, "Probe_Callejon_2", new Vector3(29.5f, 2.8f, 46f), new Vector3(14f, 12f, 48f));
+            AddReflectionProbe(probes, "Probe_Hospital", new Vector3(62f, 3.2f, 15f), new Vector3(74f, 16f, 24f));
+
             // 12. Remapear todos los materiales al set PBR con normales, emision y GPU Instancing
             RemapAllMaterials(root, materialMap);
 
@@ -450,7 +463,7 @@ namespace RutaSegura.Editor
             }
         }
 
-        private static void AddPointLight(Transform parent, string name, Vector3 pos, Color color, float range, float intensity)
+        private static void AddPointLight(Transform parent, string name, Vector3 pos, Color color, float range, float intensity, Material haloMat = null, Mesh haloConeMesh = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -461,6 +474,88 @@ namespace RutaSegura.Editor
             light.range = range;
             light.intensity = intensity;
             light.shadows = LightShadows.None;
+
+            if (haloMat != null && haloConeMesh != null)
+            {
+                var haloGo = new GameObject("Volumetric_Halo");
+                haloGo.transform.SetParent(go.transform, false);
+                haloGo.transform.localPosition = new Vector3(0f, -1.55f, 0f);
+                haloGo.AddComponent<MeshFilter>().sharedMesh = haloConeMesh;
+                var mr = haloGo.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = haloMat;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+            }
+        }
+
+        private static void AddReflectionProbe(Transform parent, string name, Vector3 pos, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var probe = go.AddComponent<ReflectionProbe>();
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
+            probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.OnAwake;
+            probe.timeSlicingMode = UnityEngine.Rendering.ReflectionProbeTimeSlicingMode.AllFacesAtOnce;
+            probe.resolution = 128;
+            probe.boxProjection = true;
+            probe.size = size;
+            probe.intensity = 0.95f;
+            probe.blendDistance = 3f;
+            probe.importance = 1;
+        }
+
+        private static Mesh GetOrCreateHaloConeMesh()
+        {
+            const string meshPath = "Assets/_Project/Materials/Halo_Cone.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+            if (existing != null) return existing;
+
+            const int segments = 16;
+            const float topRadius = 0.16f;
+            const float bottomRadius = 2.65f;
+            const float halfH = 1.65f;
+
+            var mesh = new Mesh { name = "Halo_Cone_Mesh" };
+            var verts = new Vector3[(segments + 1) * 2];
+            var uvs = new Vector2[(segments + 1) * 2];
+            var tris = new int[segments * 6];
+
+            for (int i = 0; i <= segments; i++)
+            {
+                float u = i / (float)segments;
+                float ang = u * Mathf.PI * 2f;
+                float c = Mathf.Cos(ang);
+                float s = Mathf.Sin(ang);
+
+                int topIdx = i * 2;
+                int botIdx = topIdx + 1;
+                verts[topIdx] = new Vector3(c * topRadius, +halfH, s * topRadius);
+                verts[botIdx] = new Vector3(c * bottomRadius, -halfH, s * bottomRadius);
+                uvs[topIdx] = new Vector2(u, 1f);
+                uvs[botIdx] = new Vector2(u, 0f);
+            }
+
+            int ti = 0;
+            for (int i = 0; i < segments; i++)
+            {
+                int t0 = i * 2;
+                int b0 = t0 + 1;
+                int t1 = t0 + 2;
+                int b1 = t0 + 3;
+                tris[ti++] = t0; tris[ti++] = b1; tris[ti++] = b0;
+                tris[ti++] = t0; tris[ti++] = t1; tris[ti++] = b1;
+            }
+
+            mesh.vertices = verts;
+            mesh.uv = uvs;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            AssetDatabase.CreateAsset(mesh, meshPath);
+            AssetDatabase.SaveAssets();
+            return mesh;
         }
 
         private static void ValidateBounds(Transform t, string assetName)
