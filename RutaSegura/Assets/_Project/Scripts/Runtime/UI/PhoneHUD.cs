@@ -222,7 +222,7 @@ namespace RutaSegura.Runtime.UI
             topRt.anchorMax = new Vector2(0f, 1f);
             topRt.pivot = new Vector2(0f, 1f);
             topRt.anchoredPosition = new Vector2(30f, -26f);
-            topRt.sizeDelta = new Vector2(590f, 40f);
+            topRt.sizeDelta = new Vector2(720f, 40f);
             topImg.raycastTarget = false;
 
             var topBorder = hud.CreatePanel("CyanLeft", topRt, new Color(0.20f, 0.82f, 0.92f, 0.85f));
@@ -233,7 +233,7 @@ namespace RutaSegura.Runtime.UI
             topBorder.rectTransform.sizeDelta = new Vector2(4f, 0f);
             topBorder.raycastTarget = false;
 
-            topBarText = hud.CreateText("TopBarText", topRt, "[TAB] DISPOSITIVO  |  [E] LEER ENTORNO  |  DESTINO: FLORERIA EL JAZMIN", 13, new Color(0.92f, 0.94f, 0.97f), TextAnchor.MiddleLeft, FontStyle.Bold);
+            topBarText = hud.CreateText("TopBarText", topRt, "[TAB] DISPOSITIVO  |  [E] ESCANEAR  |  [V] CAMARA  |  [RMB] ZOOM  |  FLORERIA EL JAZMIN", 13, new Color(0.92f, 0.94f, 0.97f), TextAnchor.MiddleLeft, FontStyle.Bold);
             topBarText.rectTransform.anchorMin = Vector2.zero;
             topBarText.rectTransform.anchorMax = Vector2.one;
             topBarText.rectTransform.offsetMin = new Vector2(14f, 0f);
@@ -667,7 +667,7 @@ namespace RutaSegura.Runtime.UI
             if (topBarText != null)
             {
                 string toggleLabel = isOpen ? "[TAB] CERRAR" : "[TAB] DISPOSITIVO";
-                topBarText.text = $"{toggleLabel}  |  [E] LEER ENTORNO  |  DESTINO: FLORERIA EL JAZMIN";
+                topBarText.text = $"{toggleLabel}  |  [E] ESCANEAR  |  [V] CAMARA  |  [RMB] ZOOM  |  FLORERIA EL JAZMIN";
             }
             if (topBarBadge != null)
             {

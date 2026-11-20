@@ -25,6 +25,7 @@ namespace RutaSegura.Runtime.Player
         [SerializeField] private float resultDisplayDuration = 4.5f;
 
         private PlayerController player;
+        private PlayerCameraController cameraController;
         private Camera playerCamera;
         private AudioSource audioSource;
         private float baseFov = 60f;
@@ -45,6 +46,7 @@ namespace RutaSegura.Runtime.Player
         private void Awake()
         {
             player = GetComponent<PlayerController>();
+            cameraController = GetComponent<PlayerCameraController>();
             playerCamera = GetComponentInChildren<Camera>();
             if (playerCamera != null)
             {
@@ -64,7 +66,8 @@ namespace RutaSegura.Runtime.Player
         private void OnDisable()
         {
             if (player != null) player.SetExternalSpeedMultiplier(1f);
-            if (playerCamera != null) playerCamera.fieldOfView = baseFov;
+            if (cameraController != null) cameraController.SetScannerFovOffset(0f);
+            else if (playerCamera != null) playerCamera.fieldOfView = baseFov;
         }
 
         private void BuildUI()
@@ -169,7 +172,11 @@ namespace RutaSegura.Runtime.Player
             if (holdingKey)
             {
                 player?.SetExternalSpeedMultiplier(speedMultiplierWhileScanning);
-                if (playerCamera != null)
+                if (cameraController != null)
+                {
+                    cameraController.SetScannerFovOffset(fovZoomDelta);
+                }
+                else if (playerCamera != null)
                 {
                     playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, baseFov + fovZoomDelta, Time.deltaTime * 8f);
                 }
@@ -204,7 +211,11 @@ namespace RutaSegura.Runtime.Player
                 scanCompletedThisHold = false;
                 player?.SetExternalSpeedMultiplier(1f);
 
-                if (playerCamera != null)
+                if (cameraController != null)
+                {
+                    cameraController.SetScannerFovOffset(0f);
+                }
+                else if (playerCamera != null)
                 {
                     playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, baseFov, Time.deltaTime * 8f);
                 }

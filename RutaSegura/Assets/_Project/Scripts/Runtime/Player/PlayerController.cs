@@ -72,15 +72,29 @@ namespace RutaSegura.Runtime.Player
         private float verticalVelocity = -2f;
         private float cameraPitch = 0.0f;
         private float externalSpeedMultiplier = 1.0f;
+        private float externalLookSensitivityMultiplier = 1.0f;
+        private bool externalCameraControl = false;
 
         public float CurrentSpeed => currentSpeed;
         public bool IsSprinting => isSprinting;
         public bool IsCautious => isCautious;
         public bool IsGrounded => isGrounded;
+        public float CameraPitch => cameraPitch;
+        public Camera PlayerCamera => playerCamera;
 
         public void SetExternalSpeedMultiplier(float multiplier)
         {
             externalSpeedMultiplier = Mathf.Clamp(multiplier, 0.2f, 1.5f);
+        }
+
+        public void SetExternalLookSensitivityMultiplier(float multiplier)
+        {
+            externalLookSensitivityMultiplier = Mathf.Clamp(multiplier, 0.15f, 1.5f);
+        }
+
+        public void SetExternalCameraControl(bool controlled)
+        {
+            externalCameraControl = controlled;
         }
 
         private void Awake()
@@ -210,8 +224,8 @@ namespace RutaSegura.Runtime.Player
                 currentLookVector = lookInput;
             }
 
-            float mouseX = currentLookVector.x * lookSensitivity;
-            float mouseY = currentLookVector.y * lookSensitivity * verticalSensitivityMultiplier;
+            float mouseX = currentLookVector.x * lookSensitivity * externalLookSensitivityMultiplier;
+            float mouseY = currentLookVector.y * lookSensitivity * verticalSensitivityMultiplier * externalLookSensitivityMultiplier;
 
             // Rotacion horizontal directa
             transform.Rotate(Vector3.up * mouseX);
@@ -219,7 +233,10 @@ namespace RutaSegura.Runtime.Player
             // Inclinacion vertical estandar: mouse arriba -> mira hacia arriba
             cameraPitch -= mouseY * (invertY ? -1f : 1f);
             cameraPitch = Mathf.Clamp(cameraPitch, -verticalLookLimit, verticalLookLimit);
-            playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+            if (!externalCameraControl)
+            {
+                playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+            }
         }
 
         private void HandleMovement()

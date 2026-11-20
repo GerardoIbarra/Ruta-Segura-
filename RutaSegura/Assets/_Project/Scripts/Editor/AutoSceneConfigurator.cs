@@ -66,12 +66,13 @@ namespace RutaSegura.Editor
                 modified |= EnsureComponent<ProtestAtmosphereController>(gmObj);
             }
 
-            // 5. Configurar Player con audio de pasos y escaner activo ('Leyendo Entorno...')
+            // 5. Configurar Player con audio de pasos, escaner y camara 1ra/3ra + zoom
             var playerObj = GameObject.Find("Player");
             if (playerObj != null)
             {
                 modified |= EnsureComponent<FootstepAudioController>(playerObj);
                 modified |= EnsureComponent<EnvironmentScanner>(playerObj);
+                modified |= EnsureComponent<PlayerCameraController>(playerObj);
             }
 
             // 6. Crear o encontrar el Marcador AR de Ruta Alternativa
@@ -151,7 +152,8 @@ namespace RutaSegura.Editor
                     "- Texturas PBR (Albedo + Normals), SSAO y GPU Instancing aplicados\n" +
                     "- Audio biometrico (BPM), pasos, tunel auditivo y ambiente 3D de protesta\n" +
                     "- Torretas policiacas, manta de protesta y rotulacion Floreria El Jazmin\n" +
-                    "- Escaner activo [E]/[Q] ('Leyendo Entorno...') y HUD uGUI con mini-mapa en vivo\n\n" +
+                    "- Escaner activo [E]/[Q] ('Leyendo Entorno...') y HUD uGUI con mini-mapa en vivo\n" +
+                    "- Cambio de camara [V]/[F5] (1ra/3ra persona) y zoom [RMB]/[Z] + rueda\n\n" +
                     "Presiona Play para probar.", "Aceptar");
             }
         }
