@@ -53,6 +53,7 @@ namespace RutaSegura.Runtime.Player
         private Text perspectivePillText;
 
         public bool IsThirdPerson => isThirdPerson;
+        public float CurrentZoomMultiplier => cam != null && cam.fieldOfView > 1f ? Mathf.Clamp(baseFov / cam.fieldOfView, 1f, 4f) : 1f;
 
         private void Awake()
         {
@@ -187,7 +188,7 @@ namespace RutaSegura.Runtime.Player
         private void Update()
         {
             bool blocked = (PhoneHUD.Instance != null && PhoneHUD.Instance.IsOpen) ||
-                           (GameLoopManager.Instance != null && GameLoopManager.Instance.CurrentPhase == GamePhase.Outcome) ||
+                           (GameLoopManager.Instance != null && (GameLoopManager.Instance.IsPaused || GameLoopManager.Instance.CurrentPhase == GamePhase.Outcome)) ||
                            (player != null && !player.enabled);
 
             if (!blocked && Keyboard.current != null &&

@@ -124,6 +124,10 @@ def mats():
         'manta_protesta': mat("M_Manta_Protesta", (0.90, 0.88, 0.82), 0.75),
         'flores_rojas': mat("M_Flores_Rojas", (0.82, 0.14, 0.18), 0.55),
         'flores_moradas': mat("M_Flores_Moradas", (0.55, 0.22, 0.72), 0.55),
+        'cartel_neveria': mat("M_Cartel_Neveria", (0.94, 0.90, 0.80), 0.45),
+        'cartel_carmen': mat("M_Cartel_Carmen", (0.16, 0.14, 0.22), 0.50),
+        'cartel_periodico': mat("M_Cartel_Periodico", (0.88, 0.86, 0.80), 0.65),
+        'grafiti_consigna': mat("M_Grafiti_Consigna", (0.78, 0.74, 0.66), 0.85),
     }
 
 
@@ -159,19 +163,29 @@ class MeshBuilder:
         mi = self.mat_slot(material)
         faces = set(f for v in verts for f in v.link_faces)
         ux_min = ux - sx * 0.5
+        ux_max = ux + sx * 0.5
         uy_min = uy - sy * 0.5
+        uz_min = uz - sz * 0.5
         uz_max = uz + sz * 0.5
         for f in faces:
             f.material_index = mi
             if uv_plate:
                 for loop in f.loops:
                     vy_u = loop.vert.co.z
-                    if uv_axis == 'X':
-                        # Placa mirando a -X (el jugador mira hacia +X, donde +Z queda a su izquierda)
+                    if uv_axis in ('X', '-X'):
+                        # Placa mirando a -X (jugador mira hacia +X, donde +Z queda a su izquierda)
                         vz_u = -loop.vert.co.y
                         u = max(0.0, min(1.0, (uz_max - vz_u) / sz))
+                    elif uv_axis == '+X':
+                        # Placa mirando a +X (jugador mira hacia -X, donde -Z queda a su izquierda)
+                        vz_u = -loop.vert.co.y
+                        u = max(0.0, min(1.0, (vz_u - uz_min) / sz))
+                    elif uv_axis == '+Z':
+                        # Placa mirando a +Z (jugador mira hacia -Z, donde +X queda a su izquierda)
+                        vx_u = -loop.vert.co.x
+                        u = max(0.0, min(1.0, (ux_max - vx_u) / sx))
                     else:
-                        # Placa mirando a -Z (el jugador mira hacia +Z, donde +X queda a su derecha)
+                        # Placa mirando a -Z (jugador mira hacia +Z, donde +X queda a su derecha)
                         vx_u = -loop.vert.co.x
                         u = max(0.0, min(1.0, (vx_u - ux_min) / sx))
                     v_coord = max(0.0, min(1.0, (vy_u - uy_min) / sy))
@@ -474,6 +488,10 @@ def make_manzanas_juarez():
     street_row(p, m, 'z', -62.0, 82.0, 94.0, +1, 'main', 21)
     # Placa nomenclatura colonial en esquina Av. Juarez y Callejon 1
     p.add_box((0.08, 0.36, 0.95), (7.42, 3.72, 69.2), m['placa_juarez'], uv_plate=True, uv_axis='X')
+    # Narrativa ambiental Guadalajara Centro: neveria, cartel cultural Ex Convento del Carmen y puesto/periodico
+    p.add_box((0.08, 0.55, 3.80), (-7.42, 3.72, 36.0), m['cartel_neveria'], uv_plate=True, uv_axis='+X')
+    p.add_box((0.06, 1.15, 0.85), (7.36, 1.85, 44.0), m['cartel_carmen'], uv_plate=True, uv_axis='X')
+    p.add_box((0.06, 1.05, 0.85), (-7.36, 1.80, 54.0), m['cartel_periodico'], uv_plate=True, uv_axis='+X')
     export(p, "SM_Manzanas_Juarez_Hidalgo.fbx", ARCH_DIR)
 
 
@@ -494,6 +512,8 @@ def make_manzanas_callejones():
     street_row(p, m, 'z', 55.0, 40.0, 100.0, -1, 'main', 38)
     street_row(p, m, 'x', 40.0, 37.0, 63.0, +1, 'main', 39)
     street_row(p, m, 'x', 100.0, 37.0, 63.0, -1, 'main', 40)
+    # Consigna urbana stencil en muro norte del Callejon 1
+    p.add_box((4.20, 1.25, 0.06), (20.5, 2.05, 74.88), m['grafiti_consigna'], uv_plate=True, uv_axis='Z')
     export(p, "SM_Manzanas_Callejones_Galeana.fbx", ARCH_DIR)
 
 

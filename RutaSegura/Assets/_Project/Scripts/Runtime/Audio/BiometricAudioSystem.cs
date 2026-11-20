@@ -23,6 +23,7 @@ namespace RutaSegura.Runtime.Audio
         [SerializeField] private AudioClip heartbeatClipOverride;
 
         private AudioSource audioSource;
+        private AudioSource breathingSource;
         private AudioClip activeClip;
         private float currentBPM = 68f;
         private float beatTimer;
@@ -48,6 +49,14 @@ namespace RutaSegura.Runtime.Audio
             activeClip = heartbeatClipOverride != null
                 ? heartbeatClipOverride
                 : ProceduralAudioLibrary.GetHeartbeatClip();
+
+            breathingSource = gameObject.AddComponent<AudioSource>();
+            breathingSource.clip = ProceduralAudioLibrary.GetHeavyBreathingClip();
+            breathingSource.playOnAwake = false;
+            breathingSource.loop = true;
+            breathingSource.spatialBlend = 0f;
+            breathingSource.volume = 0f;
+            breathingSource.Play();
         }
 
         private void OnDestroy()
@@ -68,6 +77,15 @@ namespace RutaSegura.Runtime.Audio
 
             float targetBPM = Mathf.Lerp(minBPM, maxBPM, threatNormalized);
             currentBPM = Mathf.Lerp(currentBPM, targetBPM, Time.deltaTime * 3.5f);
+
+            if (breathingSource != null)
+            {
+                float targetBreathVol = threatNormalized > 0.50f
+                    ? Mathf.InverseLerp(0.50f, 1.0f, threatNormalized) * 0.38f
+                    : 0f;
+                breathingSource.volume = Mathf.Lerp(breathingSource.volume, targetBreathVol, Time.deltaTime * 2.5f);
+                breathingSource.pitch = Mathf.Lerp(0.95f, 1.15f, threatNormalized);
+            }
 
             float secondsPerBeat = 60f / Mathf.Max(40f, currentBPM);
             beatTimer += Time.deltaTime;

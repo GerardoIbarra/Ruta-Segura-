@@ -43,6 +43,19 @@ namespace RutaSegura.Runtime.Player
         private Text resultTitleText;
         private Text resultBodyText;
 
+        private RectTransform hudRootRt;
+        private PoiCallout[] poiCallouts;
+        private float poiTimer;
+
+        private struct PoiCallout
+        {
+            public string Label;
+            public Vector3 WorldPos;
+            public GameObject RootObj;
+            public RectTransform Rt;
+            public Text LabelText;
+        }
+
         private void Awake()
         {
             player = GetComponent<PlayerController>();
@@ -149,6 +162,70 @@ namespace RutaSegura.Runtime.Player
 
             resultCardGroup = cardImg.gameObject;
             resultCardGroup.SetActive(false);
+
+            BuildPoiCallouts(hud);
+        }
+
+        private void BuildPoiCallouts(TacticalHUDCanvas hud)
+        {
+            hudRootRt = hud.Root;
+            Vector3 floreriaPos = new Vector3(77f, 3.4f, 15f);
+            var destObj = GameObject.Find("Destino_Floreria");
+            if (destObj != null)
+            {
+                floreriaPos = destObj.transform.position + Vector3.up * 2.8f;
+            }
+
+            Vector3 bloqueoPos = new Vector3(0f, 3.2f, 86f);
+            var cierreObj = GameObject.Find("Trigger_Cierre");
+            if (cierreObj != null)
+            {
+                bloqueoPos = cierreObj.transform.position + new Vector3(0f, 2.6f, 16f);
+            }
+
+            var defs = new[]
+            {
+                ("BLOQUEO EN AV. HIDALGO", bloqueoPos, new Color(0.96f, 0.32f, 0.24f, 0.95f)),
+                ("CORDON POLICIAL GALEANA", new Vector3(48.5f, 3.0f, 74f), new Color(0.96f, 0.68f, 0.16f, 0.95f)),
+                ("FLORERIA EL JAZMIN", floreriaPos, new Color(0.24f, 0.92f, 0.56f, 0.95f))
+            };
+
+            poiCallouts = new PoiCallout[defs.Length];
+            for (int i = 0; i < defs.Length; i++)
+            {
+                var bg = hud.CreatePanel($"Scanner_POI_{i}", hud.Root, new Color(0.05f, 0.08f, 0.12f, 0.88f));
+                var rt = bg.rectTransform;
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(228f, 44f);
+                bg.raycastTarget = false;
+
+                var accent = hud.CreatePanel("Accent", rt, defs[i].Item3);
+                accent.rectTransform.anchorMin = new Vector2(0f, 0f);
+                accent.rectTransform.anchorMax = new Vector2(0f, 1f);
+                accent.rectTransform.pivot = new Vector2(0f, 0.5f);
+                accent.rectTransform.anchoredPosition = Vector2.zero;
+                accent.rectTransform.sizeDelta = new Vector2(4f, 0f);
+                accent.raycastTarget = false;
+
+                var txt = hud.CreateText("Label", rt, defs[i].Item1, 12, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold);
+                txt.rectTransform.anchorMin = Vector2.zero;
+                txt.rectTransform.anchorMax = Vector2.one;
+                txt.rectTransform.offsetMin = new Vector2(10f, 4f);
+                txt.rectTransform.offsetMax = new Vector2(-8f, -4f);
+
+                bg.gameObject.SetActive(false);
+
+                poiCallouts[i] = new PoiCallout
+                {
+                    Label = defs[i].Item1,
+                    WorldPos = defs[i].Item2,
+                    RootObj = bg.gameObject,
+                    Rt = rt,
+                    LabelText = txt
+                };
+            }
         }
 
         private void Update()
@@ -163,7 +240,7 @@ namespace RutaSegura.Runtime.Player
             }
 
             bool blocked = (PhoneHUD.Instance != null && PhoneHUD.Instance.IsOpen) ||
-                           (GameLoopManager.Instance != null && GameLoopManager.Instance.CurrentPhase == GamePhase.Outcome) ||
+                           (GameLoopManager.Instance != null && (GameLoopManager.Instance.IsPaused || GameLoopManager.Instance.CurrentPhase == GamePhase.Outcome)) ||
                            (player != null && !player.enabled);
 
             bool holdingKey = !blocked && Keyboard.current != null &&
@@ -251,6 +328,53 @@ namespace RutaSegura.Runtime.Player
             if (resultBodyText != null) resultBodyText.text = body;
             if (resultCardGroup != null) resultCardGroup.SetActive(true);
             resultTimer = resultDisplayDuration;
+            poiTimer = 6.5f;
+        }
+
+        private void LateUpdate()
+        {
+            if (poiCallouts == null) return;
+
+            bool pausedOrOutcome = GameLoopManager.Instance != null &&
+                                   (GameLoopManager.Instance.IsPaused || GameLoopManager.Instance.CurrentPhase == GamePhase.Outcome);
+
+            if (poiTimer <= 0f || pausedOrOutcome)
+            {
+                for (int i = 0; i < poiCallouts.Length; i++)
+                {
+                    if (poiCallouts[i].RootObj != null && poiCallouts[i].RootObj.activeSelf)
+                    {
+                        poiCallouts[i].RootObj.SetActive(false);
+                    }
+                }
+                return;
+            }
+
+            poiTimer -= Time.deltaTime;
+            Camera cam = Camera.main != null ? Camera.main : playerCamera;
+            if (cam == null || hudRootRt == null) return;
+
+            for (int i = 0; i < poiCallouts.Length; i++)
+            {
+                var poi = poiCallouts[i];
+                if (poi.RootObj == null) continue;
+
+                float dist = Vector3.Distance(cam.transform.position, poi.WorldPos);
+                Vector3 sp = cam.WorldToScreenPoint(poi.WorldPos);
+
+                bool visible = dist <= 85f &&
+                               sp.z > 0.5f &&
+                               sp.x >= 20f && sp.x <= Screen.width - 20f &&
+                               sp.y >= 20f && sp.y <= Screen.height - 20f;
+
+                poi.RootObj.SetActive(visible);
+                if (visible)
+                {
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(hudRootRt, sp, null, out Vector2 localPos);
+                    poi.Rt.anchoredPosition = localPos;
+                    poi.LabelText.text = $"{poi.Label}\n{Mathf.RoundToInt(dist)} m";
+                }
+            }
         }
 
         private static void EvaluateContext(Vector3 pos, out string title, out string body)

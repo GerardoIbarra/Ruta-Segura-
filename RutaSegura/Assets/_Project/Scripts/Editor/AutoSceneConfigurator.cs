@@ -64,14 +64,18 @@ namespace RutaSegura.Editor
                 modified |= EnsureComponent<BiometricAudioSystem>(gmObj);
                 modified |= EnsureComponent<UrbanSoundscapeController>(gmObj);
                 modified |= EnsureComponent<ProtestAtmosphereController>(gmObj);
+                modified |= EnsureComponent<FlickeringStreetlamp>(gmObj);
+                modified |= EnsureComponent<WindblownDebrisController>(gmObj);
+                modified |= EnsureComponent<PerformanceTelemetryHUD>(gmObj);
             }
 
-            // 5. Configurar Player con audio de pasos, escaner y camara 1ra/3ra + zoom
+            // 5. Configurar Player con audio de pasos, escaner, avatar y camara 1ra/3ra + zoom
             var playerObj = GameObject.Find("Player");
             if (playerObj != null)
             {
                 modified |= EnsureComponent<FootstepAudioController>(playerObj);
                 modified |= EnsureComponent<EnvironmentScanner>(playerObj);
+                modified |= EnsureComponent<PlayerAvatarVisual>(playerObj);
                 modified |= EnsureComponent<PlayerCameraController>(playerObj);
             }
 

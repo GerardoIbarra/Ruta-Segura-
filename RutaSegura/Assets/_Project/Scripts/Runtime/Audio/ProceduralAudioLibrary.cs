@@ -17,6 +17,8 @@ namespace RutaSegura.Runtime.Audio
         private static AudioClip protestSirenClip;
         private static AudioClip scanTickClip;
         private static AudioClip scanCompleteClip;
+        private static AudioClip heavyBreathingClip;
+        private static AudioClip metalShutterClip;
 
         public static AudioClip GetHeartbeatClip()
         {
@@ -192,6 +194,101 @@ namespace RutaSegura.Runtime.Audio
             NormalizeAndSmoothEnds(data, fadeSamples: 128);
             scanCompleteClip = BuildClip("Proc_ScanComplete", data, loop: false);
             return scanCompleteClip;
+        }
+
+        public static AudioClip GetHeavyBreathingClip()
+        {
+            if (heavyBreathingClip != null) return heavyBreathingClip;
+
+            // Ciclo de respiracion agitada (~2.6s): inhalacion tensa + pausa breve + exhalacion pesada
+            float duration = 2.6f;
+            int totalSamples = Mathf.RoundToInt(SampleRate * duration);
+            float[] raw = new float[totalSamples];
+            uint rng = 941083u;
+            float lpFast = 0f;
+            float lpSlow = 0f;
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float white = NextWhite(ref rng);
+
+                float env = 0f;
+                float cutoffA = 0.18f;
+                float cutoffB = 0.05f;
+                if (t < 0.95f)
+                {
+                    float u = t / 0.95f;
+                    env = Mathf.Pow(Mathf.Sin(Mathf.PI * u), 1.35f) * 0.72f;
+                    cutoffA = 0.24f;
+                    cutoffB = 0.07f;
+                }
+                else if (t >= 1.18f && t < 2.38f)
+                {
+                    float u = (t - 1.18f) / 1.20f;
+                    env = Mathf.Pow(Mathf.Sin(Mathf.PI * u), 1.15f) * 1.0f;
+                    cutoffA = 0.14f;
+                    cutoffB = 0.03f;
+                }
+
+                lpFast = lpFast * (1f - cutoffA) + white * cutoffA;
+                lpSlow = lpSlow * (1f - cutoffB) + white * cutoffB;
+                float bandNoise = lpFast - lpSlow;
+                float airflowTone = Mathf.Sin(2f * Mathf.PI * 190f * t) * 0.08f;
+                raw[i] = (bandNoise * 2.2f + airflowTone) * env;
+            }
+
+            MakeSeamlessLoop(raw, overlapSamples: SampleRate / 4);
+            Normalize(raw, peakTarget: 0.76f);
+            heavyBreathingClip = BuildClip("Proc_HeavyBreathing", raw, loop: true);
+            return heavyBreathingClip;
+        }
+
+        public static AudioClip GetMetalShutterClip()
+        {
+            if (metalShutterClip != null) return metalShutterClip;
+
+            // Cortina metalica enrollable bajando con traqueteo y golpe seco final a los 1.45s (~1.6s total)
+            float duration = 1.60f;
+            int totalSamples = Mathf.RoundToInt(SampleRate * duration);
+            float[] data = new float[totalSamples];
+            uint rng = 551923u;
+            float lp = 0f;
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float white = NextWhite(ref rng);
+                lp = lp * 0.72f + white * 0.28f;
+
+                float sample = 0f;
+                if (t < 1.45f)
+                {
+                    float norm = t / 1.45f;
+                    float rattleFreq = Mathf.Lerp(18f, 34f, norm);
+                    float rattle = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Mathf.PI * rattleFreq * t));
+                    float metalHarm = Mathf.Sin(2f * Mathf.PI * 410f * t) * 0.24f +
+                                      Mathf.Sin(2f * Mathf.PI * 785f * t) * 0.18f +
+                                      Mathf.Sin(2f * Mathf.PI * 1360f * t) * 0.12f;
+                    float screechEnv = Mathf.Sin(Mathf.PI * Mathf.Clamp01(norm * 0.9f + 0.05f));
+                    sample = (metalHarm + lp * 0.55f) * rattle * screechEnv * 0.65f;
+                }
+                else
+                {
+                    float impactT = t - 1.45f;
+                    float subThump = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(78f, 36f, Mathf.Clamp01(impactT * 8f)) * impactT)
+                                     * Mathf.Exp(-impactT * 22f);
+                    float clang = (Mathf.Sin(2f * Mathf.PI * 310f * impactT) * 0.5f + lp * 0.8f)
+                                  * Mathf.Exp(-impactT * 28f);
+                    sample = subThump * 1.15f + clang * 0.75f;
+                }
+
+                data[i] = sample;
+            }
+
+            NormalizeAndSmoothEnds(data, fadeSamples: 256);
+            metalShutterClip = BuildClip("Proc_MetalShutter", data, loop: false);
+            return metalShutterClip;
         }
 
         private static void AddHeartbeatPulse(float[] data, float startSec, float durSec, float fStart, float fEnd, float amp)

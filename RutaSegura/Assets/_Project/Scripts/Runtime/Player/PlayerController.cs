@@ -155,6 +155,11 @@ namespace RutaSegura.Runtime.Player
 
         private void Update()
         {
+            if (Core.GameLoopManager.Instance != null && Core.GameLoopManager.Instance.IsPaused)
+            {
+                return;
+            }
+
             ReadInput();
             HandleLook();
             HandleMovement();

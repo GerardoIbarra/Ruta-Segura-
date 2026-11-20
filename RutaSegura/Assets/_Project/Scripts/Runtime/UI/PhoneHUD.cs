@@ -66,6 +66,12 @@ namespace RutaSegura.Runtime.UI
         private Texture2D mapTexture;
         private RectTransform playerArrowRt;
 
+        private GameObject pushToastGroup;
+        private Image pushToastAccent;
+        private Text pushToastMetaText;
+        private Text pushToastBodyText;
+        private float toastTimer;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -111,12 +117,31 @@ namespace RutaSegura.Runtime.UI
 
         private void Update()
         {
+            if (GameLoopManager.Instance != null && GameLoopManager.Instance.IsPaused)
+            {
+                return;
+            }
+
+            if (toastTimer > 0f)
+            {
+                toastTimer -= Time.deltaTime;
+                if (toastTimer <= 0f && pushToastGroup != null)
+                {
+                    pushToastGroup.SetActive(false);
+                }
+            }
+
             if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
             {
                 isOpen = !isOpen;
-                if (isOpen && currentApp == PhoneApp.EcoUrbano)
+                if (isOpen)
                 {
-                    hasUnreadAlert = false;
+                    if (pushToastGroup != null) pushToastGroup.SetActive(false);
+                    toastTimer = 0f;
+                    if (currentApp == PhoneApp.EcoUrbano)
+                    {
+                        hasUnreadAlert = false;
+                    }
                 }
                 SyncOpenState(applyCursor: true);
             }
@@ -206,6 +231,15 @@ namespace RutaSegura.Runtime.UI
                 hasUnreadAlert = true;
             }
 
+            if (markUnread && !isOpen && pushToastGroup != null)
+            {
+                if (pushToastAccent != null) pushToastAccent.color = accent;
+                if (pushToastMetaText != null) pushToastMetaText.text = $"ECO URBANO  |  {meta}";
+                if (pushToastBodyText != null) pushToastBodyText.text = body;
+                pushToastGroup.SetActive(true);
+                toastTimer = 4.5f;
+            }
+
             RebuildFeedCards();
             RefreshTopBar();
         }
@@ -250,6 +284,40 @@ namespace RutaSegura.Runtime.UI
             TacticalHUDCanvas.Stretch(badgeLbl.rectTransform);
             topBarBadge = badgeImg.gameObject;
             topBarBadge.SetActive(false);
+
+            // 1B. Notificacion flotante push de Eco Urbano (cuando el telefono esta cerrado)
+            var toastImg = hud.CreatePanel("Phone_PushToast", hud.Root, new Color(0.06f, 0.08f, 0.12f, 0.94f));
+            var toastRt = toastImg.rectTransform;
+            toastRt.anchorMin = new Vector2(1f, 0.5f);
+            toastRt.anchorMax = new Vector2(1f, 0.5f);
+            toastRt.pivot = new Vector2(1f, 0.5f);
+            toastRt.anchoredPosition = new Vector2(-32f, 20f);
+            toastRt.sizeDelta = new Vector2(340f, 96f);
+            toastImg.raycastTarget = false;
+
+            pushToastAccent = hud.CreatePanel("ToastAccent", toastRt, new Color(0.98f, 0.45f, 0.14f, 0.98f));
+            pushToastAccent.rectTransform.anchorMin = new Vector2(0f, 0f);
+            pushToastAccent.rectTransform.anchorMax = new Vector2(0f, 1f);
+            pushToastAccent.rectTransform.pivot = new Vector2(0f, 0.5f);
+            pushToastAccent.rectTransform.anchoredPosition = Vector2.zero;
+            pushToastAccent.rectTransform.sizeDelta = new Vector2(5f, 0f);
+            pushToastAccent.raycastTarget = false;
+
+            pushToastMetaText = hud.CreateText("ToastMeta", toastRt, "ECO URBANO  |  ALERTA", 12, new Color(0.98f, 0.68f, 0.25f), TextAnchor.UpperLeft, FontStyle.Bold);
+            pushToastMetaText.rectTransform.anchorMin = new Vector2(0f, 1f);
+            pushToastMetaText.rectTransform.anchorMax = new Vector2(1f, 1f);
+            pushToastMetaText.rectTransform.pivot = new Vector2(0.5f, 1f);
+            pushToastMetaText.rectTransform.anchoredPosition = new Vector2(0f, -10f);
+            pushToastMetaText.rectTransform.sizeDelta = new Vector2(-28f, 20f);
+
+            pushToastBodyText = hud.CreateText("ToastBody", toastRt, "", 12, new Color(0.92f, 0.94f, 0.97f), TextAnchor.UpperLeft, FontStyle.Normal);
+            pushToastBodyText.rectTransform.anchorMin = Vector2.zero;
+            pushToastBodyText.rectTransform.anchorMax = Vector2.one;
+            pushToastBodyText.rectTransform.offsetMin = new Vector2(14f, 10f);
+            pushToastBodyText.rectTransform.offsetMax = new Vector2(-12f, -32f);
+
+            pushToastGroup = toastImg.gameObject;
+            pushToastGroup.SetActive(false);
 
             // 2. Carcasa del telefono (abajo a la derecha)
             var chassis = hud.CreatePanel("Phone_Chassis", hud.Root, new Color(0.06f, 0.07f, 0.09f, 0.98f));

@@ -81,6 +81,60 @@ namespace RutaSegura.Editor
             string pathManta = $"{TexturesFolder}/Tex_Manta_Protesta.png";
             GenerateProtestBannerTexture(pathManta, "EXIGIMOS", "CALLES SEGURAS");
 
+            string pathNeveria = $"{TexturesFolder}/Tex_Cartel_Neveria.png";
+            GenerateBannerSignTexture(
+                pathNeveria,
+                width: 1024,
+                height: 256,
+                bgCol: new Color(0.95f, 0.90f, 0.78f),
+                fgCol: new Color(0.62f, 0.14f, 0.14f),
+                text: "NEVERIA LA PERLA",
+                charWidth: 42,
+                charHeight: 140,
+                spacing: 10);
+
+            string pathCarmen = $"{TexturesFolder}/Tex_Cartel_Carmen.png";
+            GenerateMultiLinePosterTexture(
+                pathCarmen,
+                width: 512,
+                height: 640,
+                bgCol: new Color(0.15f, 0.13f, 0.22f),
+                accentCol: new Color(0.88f, 0.62f, 0.20f),
+                textCol: new Color(0.95f, 0.92f, 0.85f),
+                lines: new[] { "EX CONVENTO", "DEL CARMEN", "CICLO DE CINE" },
+                charWidth: 28,
+                charHeight: 74,
+                spacing: 5,
+                roughStencil: false);
+
+            string pathPeriodico = $"{TexturesFolder}/Tex_Cartel_Periodico.png";
+            GenerateMultiLinePosterTexture(
+                pathPeriodico,
+                width: 512,
+                height: 640,
+                bgCol: new Color(0.89f, 0.86f, 0.78f),
+                accentCol: new Color(0.72f, 0.14f, 0.12f),
+                textCol: new Color(0.12f, 0.12f, 0.14f),
+                lines: new[] { "EL INFORMADOR", "CIERRES EN", "ZONA CENTRO" },
+                charWidth: 28,
+                charHeight: 74,
+                spacing: 5,
+                roughStencil: false);
+
+            string pathGrafiti = $"{TexturesFolder}/Tex_Grafiti_Consigna.png";
+            GenerateMultiLinePosterTexture(
+                pathGrafiti,
+                width: 1024,
+                height: 320,
+                bgCol: new Color(0.76f, 0.72f, 0.64f),
+                accentCol: new Color(0.58f, 0.14f, 0.14f),
+                textCol: new Color(0.14f, 0.13f, 0.14f),
+                lines: new[] { "CAMINAR", "SIN MIEDO" },
+                charWidth: 52,
+                charHeight: 84,
+                spacing: 12,
+                roughStencil: true);
+
             AssetDatabase.Refresh();
 
             var urpShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
@@ -91,6 +145,10 @@ namespace RutaSegura.Editor
             CreateSignMaterial("M_Placa_Calle_Juarez", pathJuarez, urpShader, smoothness: 0.55f);
             CreateSignMaterial("M_Placa_Calle_Hospital", pathHospital, urpShader, smoothness: 0.55f);
             CreateSignMaterial("M_Manta_Protesta", pathManta, urpShader, smoothness: 0.15f);
+            CreateSignMaterial("M_Cartel_Neveria", pathNeveria, urpShader, smoothness: 0.45f, emission: new Color(0.12f, 0.09f, 0.05f));
+            CreateSignMaterial("M_Cartel_Carmen", pathCarmen, urpShader, smoothness: 0.48f);
+            CreateSignMaterial("M_Cartel_Periodico", pathPeriodico, urpShader, smoothness: 0.25f);
+            CreateSignMaterial("M_Grafiti_Consigna", pathGrafiti, urpShader, smoothness: 0.12f);
             CreateConeMaterial("M_Cono_Trafico", urpShader);
 
             AssetDatabase.SaveAssets();
@@ -98,7 +156,7 @@ namespace RutaSegura.Editor
             if (showDialog)
             {
                 EditorUtility.DisplayDialog("Ruta Segura",
-                    "Senaletica vial y rotulacion tapatia generadas con exito.\n\nMateriales listos en:\n- M_Placa_CalleCerrada\n- M_Placa_Desvio\n- M_Letrero_Floreria\n- M_Placa_Calle_Juarez\n- M_Placa_Calle_Hospital\n- M_Manta_Protesta\n- M_Cono_Trafico",
+                    "Senaletica vial y narrativa urbana tapatia generadas con exito (11 materiales).",
                     "Aceptar");
             }
         }
@@ -200,6 +258,80 @@ namespace RutaSegura.Editor
             }
 
             DrawCenteredBlockText(tex, text, yCenter: height / 2, charHeight: charHeight, charWidth: charWidth, spacing: spacing, stroke: 8, fgCol);
+
+            tex.Apply();
+            File.WriteAllBytes(filePath, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+        }
+
+        private static void GenerateMultiLinePosterTexture(
+            string filePath,
+            int width,
+            int height,
+            Color bgCol,
+            Color accentCol,
+            Color textCol,
+            string[] lines,
+            int charWidth,
+            int charHeight,
+            int spacing,
+            bool roughStencil)
+        {
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float noise = (Mathf.PerlinNoise(x * 0.05f, y * 0.05f) - 0.5f) * (roughStencil ? 0.09f : 0.03f);
+                    bool isBorder = !roughStencil && (x < 14 || x >= width - 14 || y < 14 || y >= height - 14);
+                    bool isHeaderBand = !roughStencil && y >= height - 110 && y < height - 14 && x >= 14 && x < width - 14;
+                    Color baseCol = (isBorder || isHeaderBand) ? accentCol : bgCol;
+                    tex.SetPixel(x, y, new Color(
+                        Mathf.Clamp01(baseCol.r + noise),
+                        Mathf.Clamp01(baseCol.g + noise),
+                        Mathf.Clamp01(baseCol.b + noise),
+                        1f));
+                }
+            }
+
+            if (roughStencil)
+            {
+                FillRect(tex, 42, 22, width - 84, 12, accentCol);
+                FillRect(tex, 42, height - 34, width - 84, 12, accentCol);
+            }
+
+            int lineCount = lines != null ? lines.Length : 0;
+            if (lineCount > 0)
+            {
+                for (int i = 0; i < lineCount; i++)
+                {
+                    int yCenter;
+                    Color lineCol;
+                    if (roughStencil)
+                    {
+                        float span = height - 100f;
+                        yCenter = Mathf.RoundToInt((height - 50f) - (i + 0.5f) * (span / lineCount));
+                        lineCol = i == 1 ? accentCol : textCol;
+                    }
+                    else if (i == 0)
+                    {
+                        yCenter = height - 62;
+                        lineCol = Color.white;
+                    }
+                    else
+                    {
+                        float bodyBottom = 40f;
+                        float bodyTop = height - 135f;
+                        float span = bodyTop - bodyBottom;
+                        int bodyLines = Mathf.Max(1, lineCount - 1);
+                        yCenter = Mathf.RoundToInt(bodyTop - (i - 0.5f) * (span / bodyLines));
+                        lineCol = textCol;
+                    }
+
+                    DrawCenteredBlockText(tex, lines[i], yCenter, charHeight, charWidth, spacing, roughStencil ? 10 : 7, lineCol);
+                }
+            }
 
             tex.Apply();
             File.WriteAllBytes(filePath, tex.EncodeToPNG());
