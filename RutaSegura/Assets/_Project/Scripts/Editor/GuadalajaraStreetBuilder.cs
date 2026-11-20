@@ -1,17 +1,36 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using RutaSegura.Runtime.Events;
+using RutaSegura.Runtime.Navigation;
 
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Ensamblador del entorno urbano solido y horizontal de Guadalajara (Av. Juarez y Calle Galeana).
-    /// Utiliza manzanas urbanas continuas horizontales en el piso, banqueta integrada y MeshColliders precisos.
+    /// Ensamblador de la ruta larga de Guadalajara (replica del video de referencia):
+    /// Av. Juarez -> barricada en Av. Hidalgo -> Callejon 1 -> Callejon 2 -> Calle Hospital -> Floreria El Jazmin.
+    ///
+    /// Los FBX exportados desde tools/build_ruta_larga.py traen bake_space_transform=True
+    /// en coordenadas exactas de Unity, por lo que se instancian a escala (1,1,1) y rotacion identidad
+    /// con MeshColliders validos y positivos.
     /// </summary>
     public static class GuadalajaraStreetBuilder
     {
-        private const string ModelsArchDir = "Assets/_Project/Models/Architecture";
-        private const string ModelsPropsDir = "Assets/_Project/Models/Props";
+        private const string ModelsDir = "Assets/_Project/Models";
+        private const string ArchDir = ModelsDir + "/Architecture";
+        private const string PropsDir = ModelsDir + "/Props";
+        private const string MaterialsDir = "Assets/_Project/Materials";
+        private const string BoundsFile = "_Project/Models/layout_bounds.json";
+
+        public static readonly Vector3 PlayerStart = new Vector3(0f, 1.0f, 22f);
+
+        [Serializable] private class BoundsItem { public string name; public Vector3 min; public Vector3 max; }
+        [Serializable] private class BoundsList { public BoundsItem[] items; }
+
+        private static Dictionary<string, Bounds> expected;
 
         [MenuItem("Tools/Ruta Segura/Construir Entorno Real Guadalajara (1 Clic)")]
         public static void BuildGuadalajaraStreet()
@@ -19,171 +38,350 @@ namespace RutaSegura.Editor
             var scene = EditorSceneManager.GetActiveScene();
             if (!scene.isLoaded) return;
 
-            // 1. Asegurar materiales y texturas
             UrbanPaletteGenerator.GenerateUrbanMaterials();
-            RoadSignTextureGenerator.GenerateRoadSigns();
+            RoadSignTextureGenerator.GenerateRoadSigns(showDialog: false);
+            LoadExpectedBounds();
 
-            // 2. Cargar bloques maestros de arquitectura continua
-            GameObject fbCalzada = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsArchDir}/SM_Calzada_Asfalto_Completa.fbx");
-            GameObject fbNorte = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsArchDir}/SM_Manzana_Juarez_Norte.fbx");
-            GameObject fbSur = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsArchDir}/SM_Manzana_Juarez_Sur_Esquina.fbx");
-            GameObject fbFloreria = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsArchDir}/SM_Manzana_Floreria_Destino.fbx");
-            GameObject fbFarola = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsPropsDir}/SM_Farola_Colonial_GDL.fbx");
-            GameObject fbValla = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsPropsDir}/SM_Valla_Bloqueo.fbx");
-            GameObject fbCono = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsPropsDir}/SM_Cono_Trafico.fbx");
+            var matPlacaCerrada = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Placa_CalleCerrada.mat");
+            var matPlacaDesvio = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Placa_Desvio.mat");
+            var matMetalValla = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Metal_Valla.mat");
 
-            // 3. Limpiar cualquier entorno o plano primitivo previo
-            var existingEntorno = GameObject.Find("Entorno_Guadalajara");
-            if (existingEntorno != null)
+            // 1. Limpiar entorno previo (incluye objetos inactivos en la raiz)
+            foreach (var go in scene.GetRootGameObjects())
             {
-                Undo.DestroyObjectImmediate(existingEntorno);
-            }
-
-            string[] obsoleteNames = { "MuroCentral", "Cube", "Plane", "BanquetaIzquierda", "BanquetaDerecha" };
-            foreach (var name in obsoleteNames)
-            {
-                var oldObj = GameObject.Find(name);
-                if (oldObj != null)
+                if (go.name == "Entorno_Guadalajara" || go.name == "SM_Valla_Bloqueo" ||
+                    go.name == "MuroCentral" || go.name == "Cube" || go.name == "Plane" ||
+                    go.name == "BanquetaIzquierda" || go.name == "BanquetaDerecha")
                 {
-                    Undo.DestroyObjectImmediate(oldObj);
+                    Undo.DestroyObjectImmediate(go);
                 }
             }
 
-            // 4. Crear Contenedor Raiz Limpio
-            GameObject root = new GameObject("Entorno_Guadalajara");
-            Undo.RegisterCreatedObjectUndo(root, "Crear Entorno Guadalajara Horizontal");
+            var root = new GameObject("Entorno_Guadalajara");
+            Undo.RegisterCreatedObjectUndo(root, "Crear Entorno Guadalajara");
 
-            // 5. Instanciar Bloques Maestros (encajan horizontalmente en el piso en 0, 0, 0)
-            InstantiateMasterBlock(fbCalzada, "Calzada_Asfalto_Completa", root.transform, Vector3.zero);
-            InstantiateMasterBlock(fbNorte, "Manzana_Juarez_Norte", root.transform, Vector3.zero);
-            InstantiateMasterBlock(fbSur, "Manzana_Juarez_Sur_Esquina", root.transform, Vector3.zero);
-            InstantiateMasterBlock(fbFloreria, "Manzana_Floreria_Destino", root.transform, Vector3.zero);
+            // 2. Bloques urbanos (en coordenadas exactas de mundo)
+            var bloques = new GameObject("Bloques_Urbanos").transform;
+            bloques.SetParent(root.transform, false);
+            Place(ArchDir, "SM_Ruta_Piso_Completo", bloques, Vector3.zero, 0f, "Piso_Ruta_Completa", true);
+            Place(ArchDir, "SM_Manzanas_Juarez_Hidalgo", bloques, Vector3.zero, 0f, "Manzanas_Juarez_Hidalgo", true);
+            Place(ArchDir, "SM_Manzanas_Callejones_Galeana", bloques, Vector3.zero, 0f, "Manzanas_Callejones_Galeana", true);
+            Place(ArchDir, "SM_Manzanas_Hospital_Floreria", bloques, Vector3.zero, 0f, "Manzanas_Hospital_Floreria", true);
 
-            // 6. Colocar al Jugador en el inicio de la calzada
+            // 3. Farolas (y = 0.18 sobre la banqueta). Brazo local hacia +X.
+            var farolas = new GameObject("Farolas").transform;
+            farolas.SetParent(root.transform, false);
+            int fi = 0;
+            for (float z = -36f; z <= 66f; z += 14f)
+            {
+                Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(-6.8f, 0.18f, z), 0f, $"Farola_{++fi}", true);
+                Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(6.8f, 0.18f, z + 7f), 180f, $"Farola_{++fi}", true);
+            }
+            for (float x = 38f; x <= 90f; x += 13f)
+            {
+                Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(x, 0.18f, 21.7f), 90f, $"Farola_{++fi}", true);
+                Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(x + 6f, 0.18f, 8.3f), -90f, $"Farola_{++fi}", true);
+            }
+            Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(46.3f, 0.18f, 52f), 0f, $"Farola_{++fi}", true);
+            Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 60f), 180f, $"Farola_{++fi}", true);
+            Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 88f), 180f, $"Farola_{++fi}", true);
+
+            // 4. Barricada de Av. Juarez visible desde el inicio con senaletica vial
+            var barricada = new GameObject("SM_Valla_Bloqueo");
+            barricada.transform.SetParent(root.transform, false);
+            barricada.transform.position = new Vector3(0f, 0f, 79.6f);
+            for (int i = -2; i <= 2; i++)
+            {
+                var valla = Place(PropsDir, "SM_Valla_Bloqueo", barricada.transform, new Vector3(i * 2.45f, 0f, 79.6f), 0f, $"Valla_{i + 3}", false);
+                RemapSignMaterials(valla, matPlacaCerrada, matPlacaDesvio, matMetalValla);
+            }
+            Place(PropsDir, "SM_Cono_Obra", barricada.transform, new Vector3(-6.2f, 0f, 78.8f), 0f, "Cono_Valla_1", false);
+            Place(PropsDir, "SM_Cono_Obra", barricada.transform, new Vector3(6.2f, 0f, 78.8f), 0f, "Cono_Valla_2", false);
+            var bCol = barricada.AddComponent<BoxCollider>();
+            bCol.center = new Vector3(0f, 0.65f, 0f);
+            bCol.size = new Vector3(15f, 1.3f, 0.6f);
+
+            // 5. Manifestacion y policia (detras de la barricada y al fondo del Callejon 1 en Galeana)
+            var multitud = new GameObject("Manifestacion").transform;
+            multitud.SetParent(root.transform, false);
+            Place(PropsDir, "SM_Linea_Policia", multitud, new Vector3(0f, 0f, 83.2f), 0f, "Policia_Juarez", true);
+            Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(0f, 0f, 89f), 0f, "Multitud_Juarez", true);
+            Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(-16f, 0f, 88.5f), 20f, "Multitud_Hidalgo", true);
+            Place(PropsDir, "SM_Patrulla", multitud, new Vector3(12f, 0f, 88f), 90f, "Patrulla_Hidalgo_1", true);
+            Place(PropsDir, "SM_Patrulla", multitud, new Vector3(-28f, 0f, 87.5f), 80f, "Patrulla_Hidalgo_2", true);
+            Place(PropsDir, "SM_Linea_Policia", multitud, new Vector3(47.2f, 0f, 72.5f), 90f, "Policia_Galeana", true);
+            Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(51f, 0f, 78f), 90f, "Multitud_Galeana", true);
+            Place(PropsDir, "SM_Patrulla", multitud, new Vector3(50f, 0f, 63f), 10f, "Patrulla_Galeana_1", true);
+            Place(PropsDir, "SM_Patrulla", multitud, new Vector3(50.5f, 0f, 90f), -5f, "Patrulla_Galeana_2", true);
+
+            // 6. Callejones: contenedores y bolsas de basura orientados hacia el interior del pasillo
+            var callejon = new GameObject("Utileria_Callejones").transform;
+            callejon.SetParent(root.transform, false);
+            Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(11f, 0f, 70.75f), 180f, "Contenedor_1", true);
+            Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(21f, 0f, 74.25f), 0f, "Contenedor_2", true);
+            Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(27.75f, 0f, 56f), -90f, "Contenedor_3", true);
+            Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(31.25f, 0f, 44f), 90f, "Contenedor_4", true);
+            Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(27.75f, 0f, 34f), -90f, "Contenedor_5", true);
+
+            // 7. Cruce de Calle Hospital: conos y cinta de precaucion (acordonando de pared a pared el extremo oeste)
+            var obra = new GameObject("Obra_Calle_Hospital").transform;
+            obra.SetParent(root.transform, false);
+            Place(PropsDir, "SM_Cinta_Precaucion", obra, new Vector3(20.5f, 0f, 12.5f), 90f, "Cinta_Hospital_Oeste_1", true);
+            Place(PropsDir, "SM_Cinta_Precaucion", obra, new Vector3(20.5f, 0f, 17.5f), 90f, "Cinta_Hospital_Oeste_2", true);
+            Place(PropsDir, "SM_Cinta_Precaucion", obra, new Vector3(23.5f, 0f, 19.2f), 0f, "Cinta_Hospital_Norte", true);
+            Vector3[] conos = {
+                new Vector3(21.8f, 0f, 11f), new Vector3(21.8f, 0f, 13.5f), new Vector3(21.8f, 0f, 16.5f),
+                new Vector3(21.8f, 0f, 19f), new Vector3(26.4f, 0f, 19.3f), new Vector3(33f, 0f, 19.3f),
+                new Vector3(35f, 0f, 16f)
+            };
+            for (int i = 0; i < conos.Length; i++)
+            {
+                Place(PropsDir, "SM_Cono_Obra", obra, conos[i], 0f, $"Cono_Obra_{i + 1}", false);
+            }
+
+            // 8. Bloqueos invisibles (garantizan que no se pueda atravesar la barricada ni la policia)
+            AddBlocker(root.transform, "Bloqueo_Invisible_Juarez", new Vector3(0f, 2f, 80.6f), new Vector3(15.5f, 4f, 0.5f));
+            AddBlocker(root.transform, "Bloqueo_Invisible_Galeana", new Vector3(45.3f, 2f, 72.5f), new Vector3(0.5f, 4f, 5.5f));
+
+            // 9. Jugador en Av. Juarez (57.6 m antes de la barricada, mirando hacia +Z)
             var player = GameObject.Find("Player");
             if (player != null)
             {
-                player.transform.position = new Vector3(0f, 1.0f, 0f);
-                player.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                var cc = player.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+                player.transform.SetPositionAndRotation(PlayerStart, Quaternion.identity);
+                if (cc != null) cc.enabled = true;
             }
 
-            // 7. Colocar Farolas Coloniales Tapatías sobre las banquetas
-            if (fbFarola != null)
-            {
-                Vector3[] farolaPositions = {
-                    new Vector3(-5.8f, 0.18f, 2.0f),
-                    new Vector3(-5.8f, 0.18f, 14.0f),
-                    new Vector3(-5.8f, 0.18f, 26.0f),
-                    new Vector3(5.8f, 0.18f, 2.0f),
-                    new Vector3(5.8f, 0.18f, 20.0f),
-                    new Vector3(12.0f, 0.18f, 6.5f),
-                    new Vector3(12.0f, 0.18f, 15.5f)
-                };
+            // 10. Triggers, marcadores AR secuenciales y destino (~200 m totales)
+            SetBox("Trigger_Cierre", new Vector3(0f, 1.5f, 56f), new Vector3(10f, 3f, 2f), true);
+            SetBox("Zona_Peligro_Calle", new Vector3(0f, 1.5f, 75f), new Vector3(10f, 3f, 9f), true);
+            SetBox("Destino_Floreria", new Vector3(92.5f, 1.5f, 15f), new Vector3(4f, 3f, 10f), true);
 
-                for (int f = 0; f < farolaPositions.Length; f++)
-                {
-                    var farola = (GameObject)PrefabUtility.InstantiatePrefab(fbFarola);
-                    farola.name = $"Farola_Colonial_{f + 1}";
-                    farola.transform.parent = root.transform;
-                    farola.transform.position = farolaPositions[f];
-                }
-            }
-
-            // 8. Colocar Valla de Bloqueo en Av. Juárez (en Z = 13.5m)
-            var vallaObj = GameObject.Find("SM_Valla_Bloqueo");
-            if (vallaObj == null && fbValla != null)
-            {
-                vallaObj = (GameObject)PrefabUtility.InstantiatePrefab(fbValla);
-                vallaObj.name = "SM_Valla_Bloqueo";
-            }
-
-            if (vallaObj != null)
-            {
-                vallaObj.transform.parent = root.transform;
-                vallaObj.transform.position = new Vector3(0f, 0f, 13.5f);
-                vallaObj.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-
-                // Colocar conos a los costados de la valla
-                if (fbCono != null && vallaObj.transform.Find("Cono_Trafico_1") == null)
-                {
-                    var cono1 = (GameObject)PrefabUtility.InstantiatePrefab(fbCono);
-                    cono1.name = "Cono_Trafico_1";
-                    cono1.transform.parent = vallaObj.transform;
-                    cono1.transform.position = new Vector3(-2.2f, 0f, 13.3f);
-
-                    var cono2 = (GameObject)PrefabUtility.InstantiatePrefab(fbCono);
-                    cono2.name = "Cono_Trafico_2";
-                    cono2.transform.parent = vallaObj.transform;
-                    cono2.transform.position = new Vector3(2.2f, 0f, 13.3f);
-                }
-            }
-
-            // 9. Configurar Triggers y Marcadores
-            var triggerCierre = GameObject.Find("Trigger_Cierre");
-            if (triggerCierre != null)
-            {
-                triggerCierre.transform.position = new Vector3(0f, 1f, 7.5f);
-                var tCol = triggerCierre.GetComponent<BoxCollider>();
-                if (tCol != null)
-                {
-                    tCol.size = new Vector3(10f, 3f, 2f);
-                }
-            }
-
+            AlternativeRouteMarker marker1 = null;
             var marcadorObj = GameObject.Find("Marcador_Ruta_Alternativa");
             if (marcadorObj != null)
             {
-                marcadorObj.transform.position = new Vector3(3.0f, 0.1f, 8.5f);
+                marcadorObj.transform.position = new Vector3(6.2f, 0.1f, 72.5f);
+                marker1 = marcadorObj.GetComponent<AlternativeRouteMarker>();
+                SetMarkerText(marker1, "Ruta Alternativa Detectada", "Callejon del Refugio ->");
             }
 
-            var destinoObj = GameObject.Find("Destino_Floreria");
-            if (destinoObj != null)
+            // Vincular Trigger_Cierre con barricada y primer marcador
+            var roadblockEvent = UnityEngine.Object.FindFirstObjectByType<DynamicRoadblockEvent>();
+            if (roadblockEvent != null)
             {
-                destinoObj.transform.position = new Vector3(18.0f, 1f, 11.0f);
-                var destCol = destinoObj.GetComponent<BoxCollider>();
-                if (destCol != null)
+                var soEvt = new SerializedObject(roadblockEvent);
+                var pBar = soEvt.FindProperty("roadblockBarrier");
+                if (pBar != null) pBar.objectReferenceValue = barricada;
+                if (marker1 != null)
                 {
-                    destCol.size = new Vector3(4f, 3f, 4f);
-                    destCol.isTrigger = true;
+                    var pMrk = soEvt.FindProperty("alternativeRouteMarker");
+                    if (pMrk != null) pMrk.objectReferenceValue = marker1;
                 }
+                soEvt.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            var dangerZone = GameObject.Find("Zona_Peligro_Calle");
-            if (dangerZone != null)
-            {
-                dangerZone.transform.position = new Vector3(0f, 1f, 20.0f);
-                var dCol = dangerZone.GetComponent<BoxCollider>();
-                if (dCol != null)
-                {
-                    dCol.size = new Vector3(10f, 3f, 12f);
-                }
-            }
+            // Segundo marcador: giro al sur en Callejon 2 antes de llegar a la policia en Galeana
+            var markerCallejon2Obj = new GameObject("Marcador_Callejon_2");
+            markerCallejon2Obj.transform.SetParent(root.transform, false);
+            markerCallejon2Obj.transform.position = new Vector3(29.5f, 0.1f, 70.5f);
+            var markerCallejon2 = markerCallejon2Obj.AddComponent<AlternativeRouteMarker>();
+            SetMarkerText(markerCallejon2, "Desvio por Callejon", "Girar a la derecha ->");
+            CreateMarkerTrigger(root.transform, "Trigger_Callejon_1", new Vector3(16f, 1.5f, 72.5f), new Vector3(2f, 3f, 5f), markerCallejon2, marker1);
 
-            // 10. Guardar la escena
+            // Tercer marcador: salida a Calle Hospital hacia la Floreria
+            var markerHospitalObj = new GameObject("Marcador_Calle_Hospital");
+            markerHospitalObj.transform.SetParent(root.transform, false);
+            markerHospitalObj.transform.position = new Vector3(29.5f, 0.1f, 18.0f);
+            var markerHospital = markerHospitalObj.AddComponent<AlternativeRouteMarker>();
+            SetMarkerText(markerHospital, "Nueva Ruta", "Calle Hospital ->");
+            CreateMarkerTrigger(root.transform, "Trigger_Callejon_2", new Vector3(29.5f, 1.5f, 38f), new Vector3(5f, 3f, 2f), markerHospital, markerCallejon2);
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Manzanas urbanas horizontales ensambladas con éxito.");
+            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Ruta larga ensamblada: Av. Juarez -> Callejones -> Calle Hospital -> Floreria (~200 m).");
         }
 
-        private static void InstantiateMasterBlock(GameObject prefab, string name, Transform parent, Vector3 localPos)
+        private static GameObject Place(string folder, string assetName, Transform parent, Vector3 worldPos, float yaw, string name, bool addCollider)
         {
-            if (prefab == null) return;
-            var obj = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            obj.name = name;
-            obj.transform.parent = parent;
-            obj.transform.localPosition = localPos;
-            obj.transform.localRotation = Quaternion.identity;
-
-            // Asegurar MeshCollider en cada malla para colisión sólida en el piso y muros
-            var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
-            foreach (var mf in meshFilters)
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{folder}/{assetName}.fbx");
+            if (prefab == null)
             {
-                if (mf.GetComponent<Collider>() == null)
+                Debug.LogWarning($"[GUADALAJARA BUILDER] Falta el modelo {folder}/{assetName}.fbx");
+                return null;
+            }
+
+            var holder = new GameObject(name);
+            holder.transform.SetParent(parent, true);
+            holder.transform.SetPositionAndRotation(worldPos, Quaternion.Euler(0f, yaw, 0f));
+
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            inst.transform.SetParent(holder.transform, false);
+            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localRotation = Quaternion.identity;
+            inst.transform.localScale = Vector3.one;
+
+            ValidateBounds(inst.transform, assetName);
+
+            if (addCollider)
+            {
+                foreach (var mf in inst.GetComponentsInChildren<MeshFilter>(true))
                 {
-                    var col = mf.gameObject.AddComponent<MeshCollider>();
-                    col.sharedMesh = mf.sharedMesh;
+                    if (mf.sharedMesh != null && mf.GetComponent<Collider>() == null)
+                    {
+                        mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                    }
                 }
             }
+            return holder;
+        }
+
+        private static void RemapSignMaterials(GameObject vallaRoot, Material placaCerrada, Material placaDesvio, Material metalValla)
+        {
+            if (vallaRoot == null) return;
+            foreach (var mr in vallaRoot.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var shared = mr.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < shared.Length; i++)
+                {
+                    var cur = shared[i];
+                    if (cur == null) continue;
+                    if (cur.name.StartsWith("M_Placa_CalleCerrada") && placaCerrada != null && cur != placaCerrada)
+                    {
+                        shared[i] = placaCerrada;
+                        changed = true;
+                    }
+                    else if (cur.name.StartsWith("M_Placa_Desvio") && placaDesvio != null && cur != placaDesvio)
+                    {
+                        shared[i] = placaDesvio;
+                        changed = true;
+                    }
+                    else if (cur.name.StartsWith("M_Metal_Valla") && metalValla != null && cur != metalValla)
+                    {
+                        shared[i] = metalValla;
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    mr.sharedMaterials = shared;
+                }
+            }
+        }
+
+        private static void ValidateBounds(Transform t, string assetName)
+        {
+            if (expected == null || !expected.TryGetValue(assetName, out var target)) return;
+
+            var toLocal = t.worldToLocalMatrix;
+            bool has = false;
+            var actual = new Bounds();
+            foreach (var mf in t.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                var mb = mf.sharedMesh.bounds;
+                var m = toLocal * mf.transform.localToWorldMatrix;
+                foreach (var c in Corners(mb))
+                {
+                    var p = m.MultiplyPoint3x4(c);
+                    if (!has) { actual = new Bounds(p, Vector3.zero); has = true; }
+                    else actual.Encapsulate(p);
+                }
+            }
+            if (!has) return;
+
+            float maxDiff = Mathf.Max(
+                MaxAbsComponent(actual.min - target.min),
+                MaxAbsComponent(actual.max - target.max));
+            if (maxDiff > 0.15f)
+            {
+                Debug.LogWarning($"[GUADALAJARA BUILDER] {assetName}: limites importados ({actual.min:F2}..{actual.max:F2}) difieren de layout_bounds.json ({target.min:F2}..{target.max:F2}) en {maxDiff:F2}m.");
+            }
+        }
+
+        private static IEnumerable<Vector3> Corners(Bounds b)
+        {
+            var mn = b.min; var mx = b.max;
+            yield return new Vector3(mn.x, mn.y, mn.z);
+            yield return new Vector3(mx.x, mn.y, mn.z);
+            yield return new Vector3(mn.x, mx.y, mn.z);
+            yield return new Vector3(mx.x, mx.y, mn.z);
+            yield return new Vector3(mn.x, mn.y, mx.z);
+            yield return new Vector3(mx.x, mn.y, mx.z);
+            yield return new Vector3(mn.x, mx.y, mx.z);
+            yield return new Vector3(mx.x, mx.y, mx.z);
+        }
+
+        private static float MaxAbsComponent(Vector3 v) => Mathf.Max(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
+
+        private static void LoadExpectedBounds()
+        {
+            expected = new Dictionary<string, Bounds>();
+            string path = Path.Combine(Application.dataPath, BoundsFile);
+            if (!File.Exists(path))
+            {
+                Debug.LogWarning("[GUADALAJARA BUILDER] No se encontro layout_bounds.json para validar limites.");
+                return;
+            }
+
+            var list = JsonUtility.FromJson<BoundsList>(File.ReadAllText(path));
+            if (list?.items == null) return;
+            foreach (var it in list.items)
+            {
+                var b = new Bounds();
+                b.SetMinMax(it.min, it.max);
+                expected[it.name] = b;
+            }
+        }
+
+        private static void CreateMarkerTrigger(Transform parent, string name, Vector3 pos, Vector3 size, AlternativeRouteMarker showMarker, AlternativeRouteMarker hideMarker)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var col = go.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = size;
+            var comp = go.AddComponent<RouteMarkerTrigger>();
+            var so = new SerializedObject(comp);
+            so.FindProperty("marker").objectReferenceValue = showMarker;
+            so.FindProperty("markerToHide").objectReferenceValue = hideMarker;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void AddBlocker(Transform parent, string name, Vector3 pos, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            go.AddComponent<BoxCollider>().size = size;
+        }
+
+        private static void SetBox(string objName, Vector3 pos, Vector3 size, bool isTrigger)
+        {
+            var go = GameObject.Find(objName);
+            if (go == null) return;
+            go.transform.position = pos;
+            var col = go.GetComponent<BoxCollider>();
+            if (col != null)
+            {
+                col.center = Vector3.zero;
+                col.size = size;
+                col.isTrigger = isTrigger;
+            }
+        }
+
+        private static void SetMarkerText(AlternativeRouteMarker marker, string title, string subtitle)
+        {
+            if (marker == null) return;
+            var so = new SerializedObject(marker);
+            var t = so.FindProperty("routeTitle");
+            var s = so.FindProperty("routeSubtitle");
+            if (t != null) t.stringValue = title;
+            if (s != null) s.stringValue = subtitle;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
     }
 }

@@ -40,7 +40,7 @@ namespace RutaSegura.Editor
             bool modified = false;
 
             // 1. Generar texturas y materiales de senaletica vial
-            RoadSignTextureGenerator.GenerateRoadSigns();
+            RoadSignTextureGenerator.GenerateRoadSigns(showDialog: false);
 
             // 2. Construir y alinear entorno urbano real de Guadalajara
             GuadalajaraStreetBuilder.BuildGuadalajaraStreet();
@@ -65,15 +65,15 @@ namespace RutaSegura.Editor
             if (markerObj == null)
             {
                 markerObj = new GameObject("Marcador_Ruta_Alternativa");
-                markerObj.transform.position = new Vector3(4.0f, 0.1f, 8.0f);
+                markerObj.transform.position = new Vector3(6.2f, 0.1f, 72.5f);
                 markerComponent = markerObj.AddComponent<AlternativeRouteMarker>();
                 Undo.RegisterCreatedObjectUndo(markerObj, "Crear Marcador AR");
                 modified = true;
-                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en el asfalto (X: 4.0, Z: 8.0).");
+                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en la entrada del Callejon 1.");
             }
             else
             {
-                markerObj.transform.position = new Vector3(4.0f, 0.1f, 8.0f);
+                // La posicion la define GuadalajaraStreetBuilder (entrada del Callejon 1)
                 markerComponent = markerObj.GetComponent<AlternativeRouteMarker>();
                 if (markerComponent == null)
                 {
@@ -109,20 +109,13 @@ namespace RutaSegura.Editor
                         modified = true;
                     }
 
-                    // Asegurar que la valla tiene BoxCollider
+                    // Asegurar que la valla tiene BoxCollider (visible desde el inicio de Av. Juarez)
                     var col = vallaObj.GetComponent<BoxCollider>();
                     if (col == null)
                     {
                         col = vallaObj.AddComponent<BoxCollider>();
                         col.center = new Vector3(0f, 0.6f, 0f);
                         col.size = new Vector3(2.4f, 1.2f, 0.6f);
-                        modified = true;
-                    }
-
-                    // Asegurar que la valla empiece inactiva si el evento no ha ocurrido
-                    if (vallaObj.activeSelf)
-                    {
-                        vallaObj.SetActive(false);
                         modified = true;
                     }
                 }

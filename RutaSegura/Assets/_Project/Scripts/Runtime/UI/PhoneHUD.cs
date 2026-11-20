@@ -184,7 +184,7 @@ namespace RutaSegura.Runtime.UI
 
             GUI.Label(new Rect(r.x, curY, r.width, 18f), "DESTINO SELECCIONADO", headerStyle);
             curY += 20f;
-            GUI.Label(new Rect(r.x, curY, r.width, 34f), "Florería 'El Jazmín'\nDistancia estimada: 150 metros", bodyStyle);
+            GUI.Label(new Rect(r.x, curY, r.width, 34f), "Florería 'El Jazmín'\nDistancia estimada: 200 metros", bodyStyle);
             curY += 38f;
 
             // Ruta A
@@ -205,7 +205,7 @@ namespace RutaSegura.Runtime.UI
             GUI.color = Color.white;
 
             routeHeader.normal.textColor = new Color(0.35f, 0.88f, 0.45f);
-            GUI.Label(new Rect(r.x + 8f, curY + 6f, r.width - 16f, 18f), "Ruta B: Callejón Libertad", routeHeader);
+            GUI.Label(new Rect(r.x + 8f, curY + 6f, r.width - 16f, 18f), "Ruta B: Callejón del Refugio -> Calle Hospital", routeHeader);
             GUI.Label(new Rect(r.x + 8f, curY + 24f, r.width - 16f, 60f), 
                 "• Tiempo: 4 min (Rodeo)\n• Estado: [LIBRE] Vía despejada\n• Riesgo: MÍNIMO / DESPEJADO", bodyStyle);
         }

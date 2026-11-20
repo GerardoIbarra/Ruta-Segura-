@@ -15,7 +15,12 @@ namespace RutaSegura.Editor
         private const string MaterialsFolder = "Assets/_Project/Materials";
 
         [MenuItem("Tools/Ruta Segura/Generar SeÃ±alÃ©tica Vial (Calle Cerrada y DesvÃ­o)")]
-        public static void GenerateRoadSigns()
+        public static void GenerateRoadSignsMenu()
+        {
+            GenerateRoadSigns(showDialog: true);
+        }
+
+        public static void GenerateRoadSigns(bool showDialog = true)
         {
             if (!AssetDatabase.IsValidFolder(TexturesFolder))
             {
@@ -48,9 +53,12 @@ namespace RutaSegura.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayDialog("Ruta Segura",
-                "Â¡SeÃ±alÃ©tica vial urbana generada con Ã©xito!\n\nMateriales listos en:\nâ€¢ M_Placa_CalleCerrada\nâ€¢ M_Placa_Desvio\nâ€¢ M_Cono_Trafico",
-                "Aceptar");
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog("Ruta Segura",
+                    "Senaletica vial urbana generada con exito.\n\nMateriales listos en:\n- M_Placa_CalleCerrada\n- M_Placa_Desvio\n- M_Cono_Trafico",
+                    "Aceptar");
+            }
         }
 
         private static void GenerateSignTexture(string filePath, string line1, string line2, bool drawArrow)
