@@ -1,4 +1,5 @@
 using UnityEngine;
+using RutaSegura.Runtime.Core;
 using RutaSegura.Runtime.Player;
 using RutaSegura.Runtime.Threat;
 
@@ -31,7 +32,11 @@ namespace RutaSegura.Runtime.Audio
         private AudioLowPassFilter lowPassFilter;
         private PlayerController player;
         private AudioSource shutterSource;
+        private AudioSource hornSource;
+        private float hornTimer;
         private bool shutterPlayed;
+
+        private static readonly Vector3 JuarezTrafficAudioPos = new Vector3(-2.5f, 1.5f, 48f);
 
         private void Awake()
         {
@@ -55,6 +60,8 @@ namespace RutaSegura.Runtime.Audio
 
             SpawnSpatialSource("Foco_Audio_Hidalgo", hidalgoFocusPos, protestClip);
             SpawnSpatialSource("Foco_Audio_Galeana", galeanaFocusPos, protestClip);
+            SpawnSpatialSource("Foco_Audio_MurmulloJuarez", new Vector3(0f, 2.0f, 54f),
+                ProceduralAudioLibrary.GetStreetMurmurClip(), volume: 0.24f, minDist: 8f, maxDist: 52f);
 
             var shutterGo = new GameObject("Foco_Audio_CortinaMetal");
             shutterGo.transform.SetParent(transform, true);
@@ -66,10 +73,21 @@ namespace RutaSegura.Runtime.Audio
             shutterSource.maxDistance = 42f;
             shutterSource.playOnAwake = false;
 
+            var hornGo = new GameObject("Foco_Audio_ClaxonTrafico");
+            hornGo.transform.SetParent(transform, true);
+            hornGo.transform.position = JuarezTrafficAudioPos;
+            hornSource = hornGo.AddComponent<AudioSource>();
+            hornSource.spatialBlend = 1f;
+            hornSource.rolloffMode = AudioRolloffMode.Logarithmic;
+            hornSource.minDistance = 7f;
+            hornSource.maxDistance = 65f;
+            hornSource.playOnAwake = false;
+            hornTimer = Random.Range(3.5f, 6.5f);
+
             player = FindAnyObjectByType<PlayerController>();
         }
 
-        private void SpawnSpatialSource(string childName, Vector3 worldPos, AudioClip clip)
+        private void SpawnSpatialSource(string childName, Vector3 worldPos, AudioClip clip, float volume = -1f, float minDist = 8f, float maxDist = 68f)
         {
             var go = new GameObject(childName);
             go.transform.SetParent(transform, true);
@@ -80,9 +98,9 @@ namespace RutaSegura.Runtime.Audio
             src.loop = true;
             src.spatialBlend = 1f;
             src.rolloffMode = AudioRolloffMode.Logarithmic;
-            src.minDistance = 8f;
-            src.maxDistance = 68f;
-            src.volume = spatialVolume;
+            src.minDistance = minDist;
+            src.maxDistance = maxDist;
+            src.volume = volume >= 0f ? volume : spatialVolume;
             src.playOnAwake = false;
             src.Play();
         }
@@ -102,19 +120,36 @@ namespace RutaSegura.Runtime.Audio
                 lowPassFilter.cutoffFrequency = Mathf.Lerp(lowPassFilter.cutoffFrequency, targetCutoff, Time.deltaTime * 4f);
             }
 
-            if (!shutterPlayed)
+            if (player == null) player = FindAnyObjectByType<PlayerController>();
+
+            if (!shutterPlayed && player != null)
             {
-                if (player == null) player = FindAnyObjectByType<PlayerController>();
-                if (player != null)
+                Vector3 pos = player.transform.position;
+                if (pos.z >= 34f && pos.x < 10f)
                 {
-                    Vector3 pos = player.transform.position;
-                    if (pos.z >= 34f && pos.x < 10f)
+                    shutterPlayed = true;
+                    var clip = ProceduralAudioLibrary.GetMetalShutterClip();
+                    if (shutterSource != null && clip != null)
                     {
-                        shutterPlayed = true;
-                        var clip = ProceduralAudioLibrary.GetMetalShutterClip();
-                        if (shutterSource != null && clip != null)
+                        shutterSource.PlayOneShot(clip, 0.72f);
+                    }
+                }
+            }
+
+            bool paused = GameLoopManager.Instance != null && GameLoopManager.Instance.IsPaused;
+            if (!paused && player != null && hornSource != null)
+            {
+                if (Vector3.Distance(player.transform.position, JuarezTrafficAudioPos) <= 65f)
+                {
+                    hornTimer -= Time.deltaTime;
+                    if (hornTimer <= 0f)
+                    {
+                        hornTimer = Random.Range(9f, 16f);
+                        var hornClip = ProceduralAudioLibrary.GetDistantCarHornClip();
+                        if (hornClip != null)
                         {
-                            shutterSource.PlayOneShot(clip, 0.72f);
+                            hornSource.pitch = Random.Range(0.86f, 1.14f);
+                            hornSource.PlayOneShot(hornClip, Random.Range(0.24f, 0.38f));
                         }
                     }
                 }

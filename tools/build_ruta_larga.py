@@ -128,6 +128,17 @@ def mats():
         'cartel_carmen': mat("M_Cartel_Carmen", (0.16, 0.14, 0.22), 0.50),
         'cartel_periodico': mat("M_Cartel_Periodico", (0.88, 0.86, 0.80), 0.65),
         'grafiti_consigna': mat("M_Grafiti_Consigna", (0.78, 0.74, 0.66), 0.85),
+        # Trafico detenido, mobiliario, vegetacion y detalles de piso
+        'auto_body': mat("M_Auto_Carroceria", (0.72, 0.74, 0.76), 0.25, 0.5),
+        'bus_verde': mat("M_Bus_Verde", (0.14, 0.44, 0.28), 0.35, 0.2),
+        'bus_blanco': mat("M_Bus_Blanco", (0.88, 0.88, 0.85), 0.35, 0.2),
+        'faro_blanco': mat("M_Faro_Blanco", (1.0, 0.96, 0.85), 0.15),
+        'luz_freno': mat("M_Luz_Freno_Roja", (0.95, 0.08, 0.08), 0.15),
+        'luz_intermitente': mat("M_Luz_Intermitente", (1.0, 0.62, 0.05), 0.15),
+        'follaje': mat("M_Follaje_Urbano", (0.16, 0.34, 0.17), 0.85),
+        'follaje_osc': mat("M_Follaje_Oscuro", (0.11, 0.24, 0.13), 0.85),
+        'charco': mat("M_Charco_Agua", (0.09, 0.10, 0.13), 0.06, 0.25),
+        'puesto_verde': mat("M_Puesto_Verde", (0.12, 0.34, 0.22), 0.45, 0.5),
     }
 
 
@@ -465,6 +476,32 @@ def make_piso():
         box(p, (rng_p.uniform(0.22, 0.34), 0.008, rng_p.uniform(0.18, 0.28)),
             (rng_p.uniform(27.4, 31.6), 0.014, rng_p.uniform(24.0, 68.0)), m['cartulina'])
 
+    # Charcos reflectantes sobre asfalto y callejones
+    puddles = [
+        ((-3.8, 28.0), (2.0, 0.008, 3.2)),
+        ((3.6, 46.5), (1.8, 0.008, 2.8)),
+        ((-1.2, 65.5), (2.4, 0.008, 2.2)),
+        ((3.8, 75.5), (2.1, 0.008, 2.6)),
+        ((16.5, 72.5), (2.6, 0.008, 1.6)),
+        ((29.5, 53.0), (1.8, 0.008, 2.9)),
+        ((29.5, 30.0), (1.9, 0.008, 2.4)),
+        ((47.0, 13.5), (2.5, 0.008, 1.9)),
+        ((75.0, 16.2), (2.8, 0.008, 2.1)),
+    ]
+    for (px, pz), psz in puddles:
+        box(p, psz, (px, 0.004, pz), m['charco'])
+
+    # Pancartas tiradas junto a machuelos en Av. Juarez y Callejon 1
+    dropped_signs = [
+        (-4.6, 39.0), (4.6, 56.0), (-4.5, 69.5), (4.4, 74.2), (13.0, 74.3), (26.0, 70.6)
+    ]
+    for idx_s, (sx, sz) in enumerate(dropped_signs):
+        box(p, (0.04, 0.04, 1.10), (sx, 0.025, sz), m['madera'])
+        if idx_s % 2 == 0:
+            box(p, (0.72, 0.02, 0.52), (sx + 0.08, 0.04, sz - 0.18), m['cartulina'])
+        else:
+            box(p, (0.54, 0.02, 0.72), (sx - 0.06, 0.04, sz + 0.16), m['cartulina'])
+
     export(p, "SM_Ruta_Piso_Completo.fbx", ARCH_DIR)
 
 
@@ -716,6 +753,144 @@ def make_valla():
     export(p, "SM_Valla_Bloqueo.fbx", PROPS_DIR)
 
 
+def make_auto_urbano():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (1.82, 0.62, 4.30), (0.0, 0.60, 0.0), m['auto_body'])
+    box(p, (1.84, 0.18, 0.20), (0.0, 0.36, -2.14), m['herreria'])
+    box(p, (1.84, 0.18, 0.20), (0.0, 0.36, +2.14), m['herreria'])
+    box(p, (1.58, 0.56, 2.15), (0.0, 1.18, 0.18), m['auto_body'])
+    box(p, (1.62, 0.40, 1.95), (0.0, 1.17, 0.18), m['vidrio'])
+    box(p, (1.44, 0.40, 2.20), (0.0, 1.17, 0.18), m['vidrio'])
+    for x in [-0.86, 0.86]:
+        for z in [-1.35, 1.35]:
+            box(p, (0.24, 0.62, 0.62), (x, 0.31, z), m['llanta'])
+    for x in [-0.62, 0.62]:
+        box(p, (0.28, 0.14, 0.06), (x, 0.64, -2.16), m['faro_blanco'])
+        box(p, (0.30, 0.14, 0.06), (x, 0.68, +2.16), m['luz_freno'])
+    for z in [-2.16, 2.16]:
+        for x in [-0.80, 0.80]:
+            box(p, (0.12, 0.12, 0.06), (x, 0.64, z), m['luz_intermitente'])
+    export(p, "SM_Auto_Urbano.fbx", PROPS_DIR)
+
+
+def make_camion_urbano():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (2.46, 1.05, 8.60), (0.0, 0.92, 0.0), m['bus_verde'])
+    box(p, (2.44, 1.45, 8.55), (0.0, 2.17, 0.0), m['bus_blanco'])
+    box(p, (1.50, 0.28, 2.40), (0.0, 3.04, 0.40), m['minisplit'])
+    box(p, (2.48, 0.85, 7.60), (0.0, 2.10, 0.15), m['vidrio'])
+    box(p, (2.24, 1.15, 0.08), (0.0, 2.02, -4.30), m['vidrio'])
+    box(p, (1.50, 0.24, 0.08), (0.0, 2.74, -4.30), m['foco'])
+    for x in [-1.12, 1.12]:
+        for z in [-2.65, 2.55]:
+            box(p, (0.32, 0.92, 0.92), (x, 0.46, z), m['llanta'])
+    for x in [-0.82, 0.82]:
+        box(p, (0.34, 0.18, 0.06), (x, 0.70, -4.32), m['faro_blanco'])
+        box(p, (0.34, 0.20, 0.06), (x, 0.78, +4.32), m['luz_freno'])
+    for z in [-4.32, 4.32]:
+        for x in [-1.06, 1.06]:
+            box(p, (0.16, 0.14, 0.06), (x, 0.72, z), m['luz_intermitente'])
+    export(p, "SM_Camion_Urbano.fbx", PROPS_DIR)
+
+
+def make_puesto_periodicos():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (2.20, 2.25, 1.30), (0.0, 1.125, 0.0), m['puesto_verde'])
+    box(p, (2.55, 0.12, 1.85), (0.0, 2.30, -0.15), m['puesto_verde'])
+    box(p, (2.10, 0.08, 0.42), (0.0, 1.05, -0.78), m['herreria'])
+    box(p, (2.05, 0.65, 0.10), (0.0, 1.55, -0.68), m['herreria'])
+    # Pilas de periodicos y revistas coloridas al frente (-Z)
+    mag_mats = [m['cartulina'], m['toldo_r'], m['toldo_a'], m['amarillo'], m['cartulina']]
+    for i, mx in enumerate([-0.72, -0.36, 0.0, 0.36, 0.72]):
+        box(p, (0.28, 0.18, 0.24), (mx, 1.18, -0.82), mag_mats[i % len(mag_mats)])
+        box(p, (0.26, 0.34, 0.06), (mx, 1.55, -0.74), mag_mats[(i + 1) % len(mag_mats)])
+    box(p, (0.24, 0.14, 0.24), (0.0, 2.12, -0.78), m['foco'])
+    export(p, "SM_Puesto_Periodicos.fbx", PROPS_DIR)
+
+
+def make_parada_camion():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (3.40, 2.35, 0.08), (0.0, 1.25, 0.55), m['cristal'])
+    box(p, (0.10, 2.45, 0.10), (-1.65, 1.225, 0.52), m['herreria'])
+    box(p, (0.10, 2.45, 0.10), (+1.65, 1.225, 0.52), m['herreria'])
+    box(p, (3.70, 0.10, 1.55), (0.0, 2.48, 0.0), m['poste'])
+    box(p, (2.20, 0.10, 0.45), (-0.35, 0.50, 0.25), m['madera'])
+    box(p, (0.10, 0.48, 0.38), (-1.20, 0.24, 0.25), m['herreria'])
+    box(p, (0.10, 0.48, 0.38), (+0.50, 0.24, 0.25), m['herreria'])
+    box(p, (0.14, 1.75, 1.10), (+1.65, 1.25, 0.0), m['herreria'])
+    box(p, (0.16, 1.50, 0.90), (+1.65, 1.25, 0.0), m['cartulina'])
+    export(p, "SM_Parada_Camion.fbx", PROPS_DIR)
+
+
+def make_semaforo():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (0.18, 4.90, 0.18), (0.0, 2.45, 0.0), m['herreria'])
+    box(p, (3.40, 0.14, 0.14), (-1.65, 4.75, 0.0), m['herreria'])
+    box(p, (0.36, 0.98, 0.32), (-2.55, 4.25, 0.0), m['herreria'])
+    box(p, (0.20, 0.20, 0.36), (-2.55, 4.54, 0.0), m['torreta_r'])
+    box(p, (0.20, 0.20, 0.36), (-2.55, 4.25, 0.0), m['luz_intermitente'])
+    box(p, (0.20, 0.20, 0.36), (-2.55, 3.96, 0.0), m['floreria'])
+    # Cabezal peatonal en el poste
+    box(p, (0.28, 0.52, 0.26), (0.0, 3.10, -0.18), m['herreria'])
+    box(p, (0.16, 0.16, 0.28), (0.0, 3.22, -0.18), m['torreta_r'])
+    export(p, "SM_Semaforo_GDL.fbx", PROPS_DIR)
+
+
+def make_arbol_jardinera():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (1.35, 0.44, 1.35), (0.0, 0.22, 0.0), m['cantera'])
+    box(p, (1.12, 0.06, 1.12), (0.0, 0.43, 0.0), m['madera'])
+    box(p, (0.26, 2.25, 0.26), (0.0, 1.52, 0.0), m['madera'])
+    # Copa organica multicapa
+    box(p, (2.25, 1.15, 2.15), (0.0, 3.25, 0.0), m['follaje_osc'])
+    box(p, (1.80, 1.05, 1.70), (-0.42, 3.70, 0.35), m['follaje'])
+    box(p, (1.70, 1.00, 1.85), (0.45, 3.65, -0.30), m['follaje'])
+    box(p, (1.45, 0.85, 1.50), (0.15, 4.35, 0.20), m['follaje_osc'])
+    box(p, (1.15, 0.70, 1.15), (-0.20, 4.55, -0.15), m['follaje'])
+    export(p, "SM_Arbol_Jardinera.fbx", PROPS_DIR)
+
+
+def make_banca_colonial():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    box(p, (1.65, 0.08, 0.48), (0.0, 0.46, 0.0), m['madera'])
+    box(p, (1.65, 0.42, 0.06), (0.0, 0.78, 0.21), m['madera'])
+    for sx in [-0.74, 0.74]:
+        box(p, (0.08, 0.46, 0.44), (sx, 0.23, 0.0), m['herreria'])
+        box(p, (0.06, 0.28, 0.42), (sx, 0.60, 0.02), m['herreria'])
+    # Bote de basura municipal metalico junto a la banca
+    p.add_cylinder(0.22, 0.82, (1.18, 0.42, 0.05), m['herreria'], axis='Y', segments=10)
+    export(p, "SM_Banca_Colonial.fbx", PROPS_DIR)
+
+
+def make_moto_reparto():
+    reset()
+    m = mats()
+    p = MeshBuilder()
+    for z in [-0.66, 0.66]:
+        box(p, (0.14, 0.56, 0.56), (0.0, 0.28, z), m['llanta'])
+    box(p, (0.34, 0.38, 1.25), (0.0, 0.56, 0.0), m['patrulla_n'])
+    box(p, (0.16, 0.60, 0.16), (0.0, 0.76, -0.45), m['patrulla_n'])
+    box(p, (0.68, 0.05, 0.05), (0.0, 1.02, -0.45), m['herreria'])
+    box(p, (0.18, 0.16, 0.10), (0.0, 0.90, -0.56), m['faro_blanco'])
+    box(p, (0.30, 0.14, 0.55), (0.0, 0.80, 0.08), m['llanta'])
+    box(p, (0.48, 0.46, 0.48), (0.0, 1.08, 0.58), m['cono'])
+    export(p, "SM_Moto_Reparto.fbx", PROPS_DIR)
+
+
 if __name__ == "__main__":
     make_piso()
     make_manzanas_juarez()
@@ -729,6 +904,14 @@ if __name__ == "__main__":
     make_cono()
     make_cinta()
     make_valla()
+    make_auto_urbano()
+    make_camion_urbano()
+    make_puesto_periodicos()
+    make_parada_camion()
+    make_semaforo()
+    make_arbol_jardinera()
+    make_banca_colonial()
+    make_moto_reparto()
     with open(BOUNDS_JSON, "w", encoding="utf-8") as fh:
         json.dump({"items": BOUNDS}, fh, indent=2)
     print(f"[OK] {len(BOUNDS)} modelos y limites escritos en {BOUNDS_JSON}")

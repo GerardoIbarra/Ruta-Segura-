@@ -66,6 +66,7 @@ namespace RutaSegura.Editor
                 modified |= EnsureComponent<ProtestAtmosphereController>(gmObj);
                 modified |= EnsureComponent<FlickeringStreetlamp>(gmObj);
                 modified |= EnsureComponent<WindblownDebrisController>(gmObj);
+                modified |= EnsureComponent<UrbanLifeController>(gmObj);
                 modified |= EnsureComponent<PerformanceTelemetryHUD>(gmObj);
             }
 

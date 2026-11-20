@@ -118,6 +118,23 @@ namespace RutaSegura.Editor
             SetMat("M_Piel_Clara", new Color(0.72f, 0.56f, 0.44f), 0.30f, 0f, default, 0f, urpShader);
             SetMat("M_Pantalon_Mezclilla", new Color(0.16f, 0.20f, 0.30f), 0.20f, 0f, default, 0f, urpShader);
 
+            // Trafico detenido, mobiliario urbano, follaje y charcos reflectantes
+            SetMat("M_Auto_Carroceria", new Color(0.72f, 0.74f, 0.76f), 0.78f, 0.55f, default, 0f, urpShader);
+            SetMat("M_Auto_Blanco", new Color(0.86f, 0.86f, 0.84f), 0.80f, 0.35f, default, 0f, urpShader);
+            SetMat("M_Auto_Rojo", new Color(0.58f, 0.12f, 0.12f), 0.80f, 0.45f, default, 0f, urpShader);
+            SetMat("M_Auto_Gris", new Color(0.30f, 0.32f, 0.35f), 0.78f, 0.55f, default, 0f, urpShader);
+            SetMat("M_Auto_Azul", new Color(0.14f, 0.24f, 0.44f), 0.80f, 0.50f, default, 0f, urpShader);
+            SetMat("M_Auto_Taxi", new Color(0.92f, 0.72f, 0.10f), 0.75f, 0.30f, default, 0f, urpShader);
+            SetMat("M_Bus_Verde", new Color(0.12f, 0.42f, 0.26f), 0.62f, 0.25f, default, 0f, urpShader);
+            SetMat("M_Bus_Blanco", new Color(0.86f, 0.86f, 0.82f), 0.62f, 0.20f, default, 0f, urpShader);
+            SetMat("M_Faro_Blanco", new Color(1.0f, 0.96f, 0.86f), 0.90f, 0f, default, 0f, urpShader, new Color(1.8f, 1.65f, 1.3f));
+            SetMat("M_Luz_Freno_Roja", new Color(0.95f, 0.08f, 0.08f), 0.85f, 0f, default, 0f, urpShader, new Color(2.2f, 0.14f, 0.12f));
+            SetMat("M_Luz_Intermitente", new Color(1.0f, 0.62f, 0.05f), 0.85f, 0f, default, 0f, urpShader, new Color(2.2f, 1.25f, 0.08f));
+            SetMat("M_Follaje_Urbano", new Color(0.16f, 0.34f, 0.17f), 0.18f, 0f, texEstuco, 0.55f, urpShader);
+            SetMat("M_Follaje_Oscuro", new Color(0.11f, 0.24f, 0.13f), 0.15f, 0f, texEstuco, 0.55f, urpShader);
+            SetMat("M_Charco_Agua", new Color(0.08f, 0.10f, 0.13f), 0.94f, 0.25f, default, 0f, urpShader);
+            SetMat("M_Puesto_Verde", new Color(0.12f, 0.34f, 0.22f), 0.48f, 0.45f, texCortina, 0.65f, urpShader);
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }

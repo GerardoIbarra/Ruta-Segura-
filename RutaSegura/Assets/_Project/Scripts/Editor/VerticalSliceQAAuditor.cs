@@ -82,15 +82,19 @@ namespace RutaSegura.EditorTools
                 Check(fails, passes, gm.GetComponent<ProtestAtmosphereController>() != null, "GM tiene ProtestAtmosphereController");
                 Check(fails, passes, gm.GetComponent<FlickeringStreetlamp>() != null, "GM tiene FlickeringStreetlamp");
                 Check(fails, passes, gm.GetComponent<WindblownDebrisController>() != null, "GM tiene WindblownDebrisController");
+                Check(fails, passes, gm.GetComponent<UrbanLifeController>() != null, "GM tiene UrbanLifeController");
                 Check(fails, passes, gm.GetComponent<PerformanceTelemetryHUD>() != null, "GM tiene PerformanceTelemetryHUD");
             }
 
-            // 4. Triggers narrativos y marcadores
+            // 4. Triggers narrativos, poblacion y mobiliario en ruta
             Check(fails, passes, Object.FindAnyObjectByType<ThreatSystem>() != null, "ThreatSystem presente");
             Check(fails, passes, GameObject.Find("Trigger_Cierre") != null, "Trigger_Cierre presente");
             Check(fails, passes, GameObject.Find("Destino_Floreria") != null, "Destino_Floreria presente");
             Check(fails, passes, GameObject.Find("Zona_Peligro_Calle") != null, "Zona_Peligro_Calle presente");
             Check(fails, passes, GameObject.Find("Marcador_Ruta_Alternativa") != null, "Marcador_Ruta_Alternativa presente");
+            Check(fails, passes, GameObject.Find("Trafico_Detenido") != null, "Trafico_Detenido presente");
+            Check(fails, passes, GameObject.Find("Mobiliario_Urbano") != null, "Mobiliario_Urbano presente");
+            Check(fails, passes, GameObject.Find("Vegetacion_Urbana") != null, "Vegetacion_Urbana presente");
 
             // 5. AudioListener unico e InputSystem UI
             var listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude);
@@ -116,7 +120,11 @@ namespace RutaSegura.EditorTools
                 "M_Cartel_Periodico",
                 "M_Grafiti_Consigna",
                 "M_Placa_CalleCerrada",
-                "M_Manta_Protesta"
+                "M_Manta_Protesta",
+                "M_Auto_Taxi",
+                "M_Bus_Verde",
+                "M_Follaje_Urbano",
+                "M_Charco_Agua"
             };
             foreach (string matName in reqMats)
             {

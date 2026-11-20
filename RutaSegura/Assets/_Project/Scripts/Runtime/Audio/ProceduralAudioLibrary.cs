@@ -19,6 +19,8 @@ namespace RutaSegura.Runtime.Audio
         private static AudioClip scanCompleteClip;
         private static AudioClip heavyBreathingClip;
         private static AudioClip metalShutterClip;
+        private static AudioClip distantCarHornClip;
+        private static AudioClip streetMurmurClip;
 
         public static AudioClip GetHeartbeatClip()
         {
@@ -289,6 +291,67 @@ namespace RutaSegura.Runtime.Audio
             NormalizeAndSmoothEnds(data, fadeSamples: 256);
             metalShutterClip = BuildClip("Proc_MetalShutter", data, loop: false);
             return metalShutterClip;
+        }
+
+        public static AudioClip GetDistantCarHornClip()
+        {
+            if (distantCarHornClip != null) return distantCarHornClip;
+
+            // Claxon automotriz bitonal calido (~0.72s): 405 Hz + 510 Hz con armonicos suaves
+            float duration = 0.72f;
+            int totalSamples = Mathf.RoundToInt(SampleRate * duration);
+            float[] data = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float attack = Mathf.Clamp01(t / 0.035f);
+                float release = Mathf.Clamp01((duration - t) / 0.14f);
+                float env = attack * release;
+
+                float toneA = Mathf.Sin(2f * Mathf.PI * 405f * t) + 0.35f * Mathf.Sin(2f * Mathf.PI * 810f * t) + 0.14f * Mathf.Sin(2f * Mathf.PI * 1215f * t);
+                float toneB = Mathf.Sin(2f * Mathf.PI * 510f * t) + 0.30f * Mathf.Sin(2f * Mathf.PI * 1020f * t) + 0.12f * Mathf.Sin(2f * Mathf.PI * 1530f * t);
+                float warm = (float)System.Math.Tanh((toneA * 0.45f + toneB * 0.45f) * 1.15f);
+                data[i] = warm * env * 0.68f;
+            }
+
+            NormalizeAndSmoothEnds(data, fadeSamples: 256);
+            distantCarHornClip = BuildClip("Proc_DistantCarHorn", data, loop: false);
+            return distantCarHornClip;
+        }
+
+        public static AudioClip GetStreetMurmurClip()
+        {
+            if (streetMurmurClip != null) return streetMurmurClip;
+
+            // 6 segundos: murmullo de transeuntes, pasos lejanos y ralentis de trafico detenido
+            float duration = 6.0f;
+            int totalSamples = Mathf.RoundToInt(SampleRate * duration);
+            float[] raw = new float[totalSamples];
+            uint rng = 613517u;
+            float lpLow = 0f;
+            float lpMid = 0f;
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = i / (float)SampleRate;
+                float white = NextWhite(ref rng);
+
+                lpLow = lpLow * 0.985f + white * 0.015f;
+                lpMid = lpMid * 0.88f + white * 0.12f;
+
+                float crowdMod = 0.65f + 0.35f * Mathf.Sin(2f * Mathf.PI * 0.5f * t);
+                float voiceBand = (lpMid - lpLow * 0.5f) * crowdMod;
+                float engineIdle = (Mathf.Sin(2f * Mathf.PI * 46f * t) * 0.08f + Mathf.Sin(2f * Mathf.PI * 92f * t) * 0.04f)
+                                   * (0.85f + 0.15f * Mathf.Sin(2f * Mathf.PI * 1.5f * t));
+
+                raw[i] = lpLow * 1.6f + voiceBand * 1.9f + engineIdle;
+            }
+
+            MakeSeamlessLoop(raw, overlapSamples: SampleRate / 2);
+            Normalize(raw, peakTarget: 0.66f);
+            streetMurmurClip = BuildClip("Proc_StreetMurmur", raw, loop: true);
+            return streetMurmurClip;
         }
 
         private static void AddHeartbeatPulse(float[] data, float startSec, float durSec, float fStart, float fEnd, float amp)

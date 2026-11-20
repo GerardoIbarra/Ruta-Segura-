@@ -179,7 +179,7 @@ namespace RutaSegura.Editor
                 SetMarkerText(marker1, "Ruta Alternativa Detectada", "Callejon del Refugio ->");
             }
 
-            var roadblockEvent = UnityEngine.Object.FindFirstObjectByType<DynamicRoadblockEvent>();
+            var roadblockEvent = UnityEngine.Object.FindAnyObjectByType<DynamicRoadblockEvent>();
             if (roadblockEvent != null)
             {
                 var soEvt = new SerializedObject(roadblockEvent);
@@ -209,12 +209,128 @@ namespace RutaSegura.Editor
             SetMarkerText(markerHospital, "Nueva Ruta", "Calle Hospital ->");
             CreateMarkerTrigger(root.transform, "Trigger_Callejon_2", new Vector3(29.5f, 1.5f, 38f), new Vector3(5f, 3f, 2f), markerHospital, markerCallejon2, entersDetourPhase: false);
 
+            // 11B. Ciudad Viva: trafico detenido, mobiliario urbano, vegetacion y semaforos
+            var carPaintOverrides = new List<(GameObject carObj, string paintMatName)>();
+
+            var trafico = new GameObject("Trafico_Detenido").transform;
+            trafico.SetParent(root.transform, false);
+            PlaceCar(trafico, "Auto_Juarez_Taxi_1", new Vector3(-3.2f, 0f, 33.5f), 176f, "M_Auto_Taxi", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Juarez_Rojo_2", new Vector3(3.2f, 0f, 41.0f), 184f, "M_Auto_Rojo", carPaintOverrides);
+            Place(PropsDir, "SM_Camion_Urbano", trafico, new Vector3(-2.8f, 0f, 52.0f), 180f, "Camion_Urbano_Juarez", true);
+            PlaceCar(trafico, "Auto_Juarez_Gris_3", new Vector3(3.2f, 0f, 62.5f), 168f, "M_Auto_Gris", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Juarez_Azul_4", new Vector3(-3.2f, 0f, 68.0f), 182f, "M_Auto_Azul", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Juarez_Sur_5", new Vector3(-3.2f, 0f, 12.0f), 180f, "M_Auto_Blanco", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Juarez_Sur_6", new Vector3(3.3f, 0f, 4.0f), 180f, "M_Auto_Taxi", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Hospital_1", new Vector3(43.0f, 0f, 11.4f), -90f, "M_Auto_Blanco", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Hospital_2", new Vector3(54.5f, 0f, 18.6f), 90f, "M_Auto_Taxi", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Hospital_3", new Vector3(67.5f, 0f, 11.4f), -88f, "M_Auto_Azul", carPaintOverrides);
+            PlaceCar(trafico, "Auto_Hospital_4", new Vector3(78.5f, 0f, 18.6f), 92f, "M_Auto_Rojo", carPaintOverrides);
+            Place(PropsDir, "SM_Moto_Reparto", trafico, new Vector3(4.4f, 0f, 26.5f), 165f, "Moto_Reparto_Juarez", true);
+            Place(PropsDir, "SM_Moto_Reparto", trafico, new Vector3(15.5f, 0f, 70.65f), -85f, "Moto_Reparto_Callejon1", true);
+            Place(PropsDir, "SM_Moto_Reparto", trafico, new Vector3(31.3f, 0f, 61.0f), 175f, "Moto_Reparto_Callejon2", true);
+            Place(PropsDir, "SM_Moto_Reparto", trafico, new Vector3(89.2f, 0f, 11.2f), -65f, "Moto_Reparto_Floreria", true);
+
+            var mobiliario = new GameObject("Mobiliario_Urbano").transform;
+            mobiliario.SetParent(root.transform, false);
+            Place(PropsDir, "SM_Puesto_Periodicos", mobiliario, new Vector3(-6.5f, 0.18f, 29.0f), -90f, "Puesto_Periodicos_Juarez", true);
+            Place(PropsDir, "SM_Parada_Camion", mobiliario, new Vector3(6.4f, 0.18f, 36.0f), 90f, "Parada_Camion_Juarez", true);
+            Place(PropsDir, "SM_Puesto_Periodicos", mobiliario, new Vector3(58.5f, 0.18f, 21.4f), 0f, "Puesto_Periodicos_Hospital", true);
+            Place(PropsDir, "SM_Parada_Camion", mobiliario, new Vector3(72.0f, 0.18f, 8.6f), 180f, "Parada_Camion_Hospital", true);
+            var benches = new (string name, Vector3 pos, float yaw)[]
+            {
+                ("Banca_Juarez_1", new Vector3(-6.5f, 0.18f, 43.0f), -90f),
+                ("Banca_Juarez_2", new Vector3(6.5f, 0.18f, 51.0f), 90f),
+                ("Banca_Juarez_3", new Vector3(-6.5f, 0.18f, 58.0f), -90f),
+                ("Banca_Juarez_4", new Vector3(6.5f, 0.18f, 23.0f), 90f),
+                ("Banca_Callejon2_1", new Vector3(27.55f, 0.0f, 48.0f), -90f),
+                ("Banca_Callejon2_2", new Vector3(31.40f, 0.0f, 28.0f), 90f),
+                ("Banca_Hospital_1", new Vector3(47.5f, 0.18f, 21.4f), 0f),
+                ("Banca_Hospital_2", new Vector3(76.0f, 0.18f, 21.4f), 0f),
+                ("Banca_Hospital_3", new Vector3(80.0f, 0.18f, 8.6f), 180f)
+            };
+            foreach (var b in benches)
+            {
+                Place(PropsDir, "SM_Banca_Colonial", mobiliario, b.pos, b.yaw, b.name, true);
+            }
+            MarkStaticRecursive(mobiliario.gameObject);
+
+            var vegetacion = new GameObject("Vegetacion_Urbana").transform;
+            vegetacion.SetParent(root.transform, false);
+            var trees = new (string name, Vector3 pos)[]
+            {
+                ("Arbol_Juarez_1", new Vector3(-6.35f, 0.18f, 14.0f)),
+                ("Arbol_Juarez_2", new Vector3(6.35f, 0.18f, 30.5f)),
+                ("Arbol_Juarez_3", new Vector3(-6.35f, 0.18f, 49.5f)),
+                ("Arbol_Juarez_4", new Vector3(6.35f, 0.18f, 60.5f)),
+                ("Arbol_Juarez_5", new Vector3(-6.35f, 0.18f, 66.5f)),
+                ("Arbol_Hospital_1", new Vector3(41.0f, 0.18f, 21.3f)),
+                ("Arbol_Hospital_2", new Vector3(49.0f, 0.18f, 8.7f)),
+                ("Arbol_Hospital_3", new Vector3(63.5f, 0.18f, 8.7f)),
+                ("Arbol_Hospital_4", new Vector3(68.0f, 0.18f, 21.3f)),
+                ("Arbol_Hospital_5", new Vector3(82.5f, 0.18f, 21.3f)),
+                ("Arbol_Hospital_6", new Vector3(86.0f, 0.18f, 8.7f))
+            };
+            foreach (var tr in trees)
+            {
+                Place(PropsDir, "SM_Arbol_Jardinera", vegetacion, tr.pos, 0f, tr.name, true);
+            }
+            MarkStaticRecursive(vegetacion.gameObject);
+
+            var semaforos = new GameObject("Semaforos").transform;
+            semaforos.SetParent(root.transform, false);
+            Place(PropsDir, "SM_Semaforo_GDL", semaforos, new Vector3(5.35f, 0.18f, 76.2f), 0f, "Semaforo_Juarez_Hidalgo", true);
+            Place(PropsDir, "SM_Semaforo_GDL", semaforos, new Vector3(-5.35f, 0.18f, 18.0f), 180f, "Semaforo_Juarez_Sur", true);
+            Place(PropsDir, "SM_Semaforo_GDL", semaforos, new Vector3(32.6f, 0.18f, 20.4f), 90f, "Semaforo_Hospital", true);
+
             // 12. Remapear todos los materiales al set PBR con normales, emision y GPU Instancing
             RemapAllMaterials(root, materialMap);
+
+            foreach (var entry in carPaintOverrides)
+            {
+                OverrideCarPaint(entry.carObj, materialMap, entry.paintMatName);
+            }
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Ruta larga ensamblada con PBR, Static Batching, torretas y rotulacion tapatia.");
+        }
+
+        private static void PlaceCar(
+            Transform parent,
+            string instanceName,
+            Vector3 worldPos,
+            float yaw,
+            string paintMatName,
+            List<(GameObject carObj, string paintMatName)> overrides)
+        {
+            var obj = Place(PropsDir, "SM_Auto_Urbano", parent, worldPos, yaw, instanceName, true);
+            if (obj != null && !string.IsNullOrEmpty(paintMatName))
+            {
+                overrides.Add((obj, paintMatName));
+            }
+        }
+
+        private static void OverrideCarPaint(GameObject carObj, Dictionary<string, Material> map, string paintMatName)
+        {
+            if (carObj == null || map == null || !map.TryGetValue(paintMatName, out var paintMat)) return;
+
+            foreach (var mr in carObj.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var shared = mr.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < shared.Length; i++)
+                {
+                    if (shared[i] != null && shared[i].name.Contains("M_Auto_Carroceria"))
+                    {
+                        shared[i] = paintMat;
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    mr.sharedMaterials = shared;
+                }
+            }
         }
 
         private static GameObject Place(string folder, string assetName, Transform parent, Vector3 worldPos, float yaw, string name, bool addCollider)
