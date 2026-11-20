@@ -41,23 +41,15 @@ def get_mats():
         'cebra': mat("M_Paso_Cebra_Blanco", (0.85, 0.85, 0.82, 1.0), roughness=0.6)
     }
 
-# Funcion para colocar cajas usando coordenadas directas de Unity
-# En Unity: X=ancho (izq/der), Y=altura (arriba), Z=longitud (adelante)
-# Mapeo a Blender Z-Up:
-#   Blender X = Unity X
-#   Blender Y = -Unity Z  (para que +Z en Unity sea hacia adelante)
-#   Blender Z = Unity Y   (para que +Y en Unity sea hacia arriba)
+# Coordenadas 1:1 con Unity (X=ancho, Y=altura vertical, Z=longitud horizontal en el suelo)
 def add_unity_box(parts, name, size_xyz, pos_xyz, material):
     # size_xyz = (ancho_x, alto_y, largo_z)
     # pos_xyz  = (pos_x, pos_y, pos_z)
-    blender_size = (size_xyz[0], size_xyz[2], size_xyz[1])
-    blender_pos  = (pos_xyz[0], -pos_xyz[2], pos_xyz[1])
-    
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=blender_pos)
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=pos_xyz)
     o = bpy.context.active_object
     o.name = name
-    o.scale = blender_size
-    bpy.ops.object.transform_apply(scale=True)
+    o.scale = size_xyz
+    bpy.ops.object.transform_apply(scale=True, location=True)
     if o.data.materials:
         o.data.materials[0] = material
     else:
@@ -73,13 +65,12 @@ def export_clean_fbx(parts, filename, folder=OUTPUT_DIR):
     bpy.ops.object.join()
     obj = bpy.context.active_object
     
-    # Origen limpio en el piso (0, 0, 0) y rotación neutral 0
+    # Origen limpio en el piso (0, 0, 0)
     bpy.context.scene.cursor.location = (0, 0, 0)
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     
     filepath = os.path.join(folder, filename)
-    # Exportador estándar Blender a Unity FBX (Blender Z -> Unity Y, Blender -Y -> Unity Z)
     bpy.ops.export_scene.fbx(
         filepath=filepath,
         use_selection=True,
@@ -88,20 +79,18 @@ def export_clean_fbx(parts, filename, folder=OUTPUT_DIR):
         apply_scale_options='FBX_SCALE_ALL',
         object_types={'MESH'}
     )
-    print(f"[EXPORTADO 100% HORIZONTAL] {filename}")
+    print(f"[EXPORTADO 100% HORIZONTAL VERIFICADO] {filename}")
 
 # ==============================================================================
 # 1. MANZANA NORTE CONTINUA (Av. Juárez Norte)
-# X: de -7.5 a -14.5 (7m fondo macizo). Z: de -8 a +34 (42m largo continuo). Y: 8 a 11m alto
-# Banqueta integrada: X de -5.0 a -7.5, Z de -8 a +34, Y: 0.18m alto
+# X: de -7.5 a -14.5 (7m fondo macizo). Z: de -8 a +34 (42m largo horizontal). Y: 8 a 11m alto vertical
 # ==============================================================================
 def make_manzana_norte():
     reset()
     m = get_mats()
     p = []
     
-    # Banqueta corrida con machuelo
-    # size = (ancho_x, alto_y, largo_z)
+    # Banqueta corrida con machuelo horizontal
     add_unity_box(p, "Banqueta_Norte", (2.5, 0.18, 42.0), (-6.25, 0.09, 13.0), m['banqueta'])
     add_unity_box(p, "Machuelo_Norte", (0.15, 0.18, 42.0), (-5.075, 0.09, 13.0), m['machuelo'])
     
@@ -117,7 +106,7 @@ def make_manzana_norte():
     ]
     
     for bz, bw, bh, bmat, bstyle in buildings:
-        # Cuerpo macizo del edificio (7m de fondo hacia X negativo)
+        # Cuerpo macizo del edificio (7m de fondo hacia X negativo, altura bh en Y vertical)
         add_unity_box(p, f"Cuerpo_N_{bz}", (7.0, bh, bw), (-11.0, bh / 2, bz), bmat)
         
         # Zócalo de cantera en la base frontal
@@ -158,8 +147,8 @@ def make_manzana_norte():
 # ==============================================================================
 # 2. MANZANA SUR CON ESQUINA A CALLE GALEANA
 # Lado derecho de Av. Juárez (X: +7.5 a +14.5).
-# Bloque 1 previo al cruce: Z: -8 a +6 (14m largo).
-# Bloque 2 posterior al cruce: Z: +16 a +34 (18m largo).
+# Bloque 1 previo al cruce: Z: -8 a +6 (14m largo horizontal).
+# Bloque 2 posterior al cruce: Z: +16 a +34 (18m largo horizontal).
 # Cruce de Calle Galeana hacia la derecha (+X): Z: +6 a +16 (10m de calle abierta)
 # ==============================================================================
 def make_manzana_sur_esquina():
@@ -245,12 +234,11 @@ def make_floreria_destino():
     add_unity_box(p, "Marco_Puerta", (0.16, 3.1, 2.1), (19.88, 1.65, 13.8), m['cantera'])
     
     # 5. Toldo Comercial Bermellón inclinado
-    # En Blender: pos_y = -pos_z_unity = -11.0, pos_z = pos_y_unity = 3.3
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(18.8, -11.0, 3.3))
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(18.8, 3.3, 11.0))
     toldo = bpy.context.active_object
     toldo.name = "Toldo_Floreria"
-    toldo.scale = (2.2, 9.5, 0.08)
-    toldo.rotation_euler = (0, math.radians(-16), 0)
+    toldo.scale = (2.2, 0.08, 9.5)
+    toldo.rotation_euler = (0, 0, math.radians(16))
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     if toldo.data.materials:
         toldo.data.materials[0] = m['toldo']
@@ -284,7 +272,7 @@ def make_calzada():
     m = get_mats()
     p = []
     
-    # 1. Asfalto principal de Av. Juárez (X: -5.0 a +5.0 = 10m de ancho libre. Z: -8 a +34 = 42m de largo)
+    # 1. Asfalto principal de Av. Juárez (X: -5.0 a +5.0 = 10m de ancho libre. Z: -8 a +34 = 42m de largo horizontal en el suelo)
     add_unity_box(p, "Asfalto_Juarez", (10.0, 0.05, 42.0), (0.0, -0.025, 13.0), m['asfalto'])
     
     # 2. Asfalto de Calle Galeana (X: +5.0 a +18.0 = 13m de largo. Z: +6.0 a +16.0 = 10m de ancho libre)
@@ -296,9 +284,36 @@ def make_calzada():
 
     export_clean_fbx(p, "SM_Calzada_Asfalto_Completa.fbx")
 
+# ==============================================================================
+# 5. FAROLA COLONIAL TAPATIA VERTICAL (SM_Farola_Colonial_GDL)
+# Y: 0 a 3.75m vertical hacia arriba
+# ==============================================================================
+def make_farola():
+    reset()
+    m = get_mats()
+    p = []
+    
+    # Base octagonal estilizada (Y: 0 a 0.7m)
+    add_unity_box(p, "Base_Farola", (0.5, 0.7, 0.5), (0.0, 0.35, 0.0), m['herreria'])
+    
+    # Poste vertical esbelto (Y: 0.7 a 3.1m)
+    add_unity_box(p, "Poste_Farola", (0.16, 2.4, 0.16), (0.0, 1.9, 0.0), m['herreria'])
+    
+    # Brazo volado hacia la calle (+X)
+    add_unity_box(p, "Brazo_Farola", (0.45, 0.10, 0.12), (0.22, 3.1, 0.0), m['herreria'])
+    
+    # Farol hexagonal de cantera / cristal luminoso (Y: 3.15 a 3.55m)
+    add_unity_box(p, "Caja_Farol", (0.32, 0.40, 0.32), (0.40, 3.35, 0.0), m['amarillo'])
+    
+    # Remate superior en punta (Y: 3.55 a 3.75m)
+    add_unity_box(p, "Caperuza_Farol", (0.38, 0.18, 0.38), (0.40, 3.64, 0.0), m['herreria'])
+
+    export_clean_fbx(p, "SM_Farola_Colonial_GDL.fbx", folder=PROPS_DIR)
+
 # Ejecutar todo
 make_manzana_norte()
 make_manzana_sur_esquina()
 make_floreria_destino()
 make_calzada()
-print("[TODOS LOS BLOQUES URBANOS MAESTROS REGENERADOS - 100% HORIZONTALES]")
+make_farola()
+print("[TODOS LOS BLOQUES URBANOS Y PROPS REGENERADOS - 100% HORIZONTALES Y VERTICALES]")
