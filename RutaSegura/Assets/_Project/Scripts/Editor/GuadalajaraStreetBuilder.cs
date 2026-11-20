@@ -10,12 +10,10 @@ using RutaSegura.Runtime.Navigation;
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Ensamblador de la ruta larga de Guadalajara (replica del video de referencia):
-    /// Av. Juarez -> barricada en Av. Hidalgo -> Callejon 1 -> Callejon 2 -> Calle Hospital -> Floreria El Jazmin.
-    ///
-    /// Los FBX exportados desde tools/build_ruta_larga.py traen bake_space_transform=True
-    /// en coordenadas exactas de Unity, por lo que se instancian a escala (1,1,1) y rotacion identidad
-    /// con MeshColliders validos y positivos.
+    /// Ensamblador de la ruta larga de Guadalajara (~200 m):
+    /// Av. Juarez -> barricada/protesta en Av. Hidalgo -> Callejon 1 -> Callejon 2 -> Calle Hospital -> Floreria El Jazmin.
+    /// Remapea materiales PBR con GPU Instancing, activa Static Batching en bloques urbanos,
+    /// coloca puntos de luz en cruces/floreria y conecta triggers y marcadores secuenciales.
     /// </summary>
     public static class GuadalajaraStreetBuilder
     {
@@ -38,13 +36,10 @@ namespace RutaSegura.Editor
             var scene = EditorSceneManager.GetActiveScene();
             if (!scene.isLoaded) return;
 
-            UrbanPaletteGenerator.GenerateUrbanMaterials();
+            UrbanPaletteGenerator.GenerateUrbanMaterials(forceRegenerate: false);
             RoadSignTextureGenerator.GenerateRoadSigns(showDialog: false);
             LoadExpectedBounds();
-
-            var matPlacaCerrada = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Placa_CalleCerrada.mat");
-            var matPlacaDesvio = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Placa_Desvio.mat");
-            var matMetalValla = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsDir}/M_Metal_Valla.mat");
+            var materialMap = LoadMaterialMap();
 
             // 1. Limpiar entorno previo (incluye objetos inactivos en la raiz)
             foreach (var go in scene.GetRootGameObjects())
@@ -60,13 +55,13 @@ namespace RutaSegura.Editor
             var root = new GameObject("Entorno_Guadalajara");
             Undo.RegisterCreatedObjectUndo(root, "Crear Entorno Guadalajara");
 
-            // 2. Bloques urbanos (en coordenadas exactas de mundo)
+            // 2. Bloques urbanos maestros (estaticos para Static Batching y oclusion)
             var bloques = new GameObject("Bloques_Urbanos").transform;
             bloques.SetParent(root.transform, false);
-            Place(ArchDir, "SM_Ruta_Piso_Completo", bloques, Vector3.zero, 0f, "Piso_Ruta_Completa", true);
-            Place(ArchDir, "SM_Manzanas_Juarez_Hidalgo", bloques, Vector3.zero, 0f, "Manzanas_Juarez_Hidalgo", true);
-            Place(ArchDir, "SM_Manzanas_Callejones_Galeana", bloques, Vector3.zero, 0f, "Manzanas_Callejones_Galeana", true);
-            Place(ArchDir, "SM_Manzanas_Hospital_Floreria", bloques, Vector3.zero, 0f, "Manzanas_Hospital_Floreria", true);
+            MarkStaticRecursive(Place(ArchDir, "SM_Ruta_Piso_Completo", bloques, Vector3.zero, 0f, "Piso_Ruta_Completa", true));
+            MarkStaticRecursive(Place(ArchDir, "SM_Manzanas_Juarez_Hidalgo", bloques, Vector3.zero, 0f, "Manzanas_Juarez_Hidalgo", true));
+            MarkStaticRecursive(Place(ArchDir, "SM_Manzanas_Callejones_Galeana", bloques, Vector3.zero, 0f, "Manzanas_Callejones_Galeana", true));
+            MarkStaticRecursive(Place(ArchDir, "SM_Manzanas_Hospital_Floreria", bloques, Vector3.zero, 0f, "Manzanas_Hospital_Floreria", true));
 
             // 3. Farolas (y = 0.18 sobre la banqueta). Brazo local hacia +X.
             var farolas = new GameObject("Farolas").transform;
@@ -86,14 +81,27 @@ namespace RutaSegura.Editor
             Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 60f), 180f, $"Farola_{++fi}", true);
             Place(PropsDir, "SM_Farola_Colonial_GDL", farolas, new Vector3(53.7f, 0.18f, 88f), 180f, $"Farola_{++fi}", true);
 
-            // 4. Barricada de Av. Juarez visible desde el inicio con senaletica vial
+            // 4. Luces calidas en puntos clave de navegacion y escaparate de la Floreria (sin sombras para 120 FPS)
+            var luces = new GameObject("Luces_Guia").transform;
+            luces.SetParent(root.transform, false);
+            Color warmStreet = new Color(1.0f, 0.78f, 0.48f);
+            AddPointLight(luces, "Luz_Juarez_1", new Vector3(-5.8f, 3.8f, 34f), warmStreet, 15f, 4.2f);
+            AddPointLight(luces, "Luz_Juarez_2", new Vector3(5.8f, 3.8f, 48f), warmStreet, 15f, 4.2f);
+            AddPointLight(luces, "Luz_Juarez_3", new Vector3(-5.8f, 3.8f, 62f), warmStreet, 15f, 4.2f);
+            AddPointLight(luces, "Luz_Callejon_1", new Vector3(6.5f, 3.6f, 71.0f), warmStreet, 14f, 4.0f);
+            AddPointLight(luces, "Luz_Callejon_2", new Vector3(29.5f, 3.6f, 71.5f), warmStreet, 14f, 4.0f);
+            AddPointLight(luces, "Luz_Callejon_Mid", new Vector3(29.5f, 3.6f, 46.0f), warmStreet, 14f, 3.6f);
+            AddPointLight(luces, "Luz_Hospital_Entrada", new Vector3(29.5f, 3.6f, 20.5f), warmStreet, 15f, 4.0f);
+            AddPointLight(luces, "Luz_Hospital_Mid", new Vector3(62.0f, 3.8f, 15.0f), warmStreet, 16f, 4.0f);
+            AddPointLight(luces, "Luz_Floreria_Faro", new Vector3(93.2f, 3.6f, 15.0f), new Color(0.82f, 1.0f, 0.76f), 18f, 5.5f);
+
+            // 5. Barricada de Av. Juarez visible desde el inicio con senaletica vial
             var barricada = new GameObject("SM_Valla_Bloqueo");
             barricada.transform.SetParent(root.transform, false);
             barricada.transform.position = new Vector3(0f, 0f, 79.6f);
             for (int i = -2; i <= 2; i++)
             {
-                var valla = Place(PropsDir, "SM_Valla_Bloqueo", barricada.transform, new Vector3(i * 2.45f, 0f, 79.6f), 0f, $"Valla_{i + 3}", false);
-                RemapSignMaterials(valla, matPlacaCerrada, matPlacaDesvio, matMetalValla);
+                Place(PropsDir, "SM_Valla_Bloqueo", barricada.transform, new Vector3(i * 2.45f, 0f, 79.6f), 0f, $"Valla_{i + 3}", false);
             }
             Place(PropsDir, "SM_Cono_Obra", barricada.transform, new Vector3(-6.2f, 0f, 78.8f), 0f, "Cono_Valla_1", false);
             Place(PropsDir, "SM_Cono_Obra", barricada.transform, new Vector3(6.2f, 0f, 78.8f), 0f, "Cono_Valla_2", false);
@@ -101,12 +109,13 @@ namespace RutaSegura.Editor
             bCol.center = new Vector3(0f, 0.65f, 0f);
             bCol.size = new Vector3(15f, 1.3f, 0.6f);
 
-            // 5. Manifestacion y policia (detras de la barricada y al fondo del Callejon 1 en Galeana)
+            // 6. Manifestacion y policia (Av. Hidalgo + Calle Galeana)
             var multitud = new GameObject("Manifestacion").transform;
             multitud.SetParent(root.transform, false);
             Place(PropsDir, "SM_Linea_Policia", multitud, new Vector3(0f, 0f, 83.2f), 0f, "Policia_Juarez", true);
             Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(0f, 0f, 89f), 0f, "Multitud_Juarez", true);
             Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(-16f, 0f, 88.5f), 20f, "Multitud_Hidalgo", true);
+            Place(PropsDir, "SM_Multitud_Protesta", multitud, new Vector3(15f, 0f, 88.5f), -20f, "Multitud_Hidalgo_Este", true);
             Place(PropsDir, "SM_Patrulla", multitud, new Vector3(12f, 0f, 88f), 90f, "Patrulla_Hidalgo_1", true);
             Place(PropsDir, "SM_Patrulla", multitud, new Vector3(-28f, 0f, 87.5f), 80f, "Patrulla_Hidalgo_2", true);
             Place(PropsDir, "SM_Linea_Policia", multitud, new Vector3(47.2f, 0f, 72.5f), 90f, "Policia_Galeana", true);
@@ -114,7 +123,7 @@ namespace RutaSegura.Editor
             Place(PropsDir, "SM_Patrulla", multitud, new Vector3(50f, 0f, 63f), 10f, "Patrulla_Galeana_1", true);
             Place(PropsDir, "SM_Patrulla", multitud, new Vector3(50.5f, 0f, 90f), -5f, "Patrulla_Galeana_2", true);
 
-            // 6. Callejones: contenedores y bolsas de basura orientados hacia el interior del pasillo
+            // 7. Callejones: contenedores y bolsas de basura orientados hacia el interior del pasillo
             var callejon = new GameObject("Utileria_Callejones").transform;
             callejon.SetParent(root.transform, false);
             Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(11f, 0f, 70.75f), 180f, "Contenedor_1", true);
@@ -123,7 +132,7 @@ namespace RutaSegura.Editor
             Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(31.25f, 0f, 44f), 90f, "Contenedor_4", true);
             Place(PropsDir, "SM_Contenedor_Basura", callejon, new Vector3(27.75f, 0f, 34f), -90f, "Contenedor_5", true);
 
-            // 7. Cruce de Calle Hospital: conos y cinta de precaucion (acordonando de pared a pared el extremo oeste)
+            // 8. Cruce de Calle Hospital: conos y cinta de precaucion (acordonando de pared a pared el extremo oeste)
             var obra = new GameObject("Obra_Calle_Hospital").transform;
             obra.SetParent(root.transform, false);
             Place(PropsDir, "SM_Cinta_Precaucion", obra, new Vector3(20.5f, 0f, 12.5f), 90f, "Cinta_Hospital_Oeste_1", true);
@@ -139,11 +148,14 @@ namespace RutaSegura.Editor
                 Place(PropsDir, "SM_Cono_Obra", obra, conos[i], 0f, $"Cono_Obra_{i + 1}", false);
             }
 
-            // 8. Bloqueos invisibles (garantizan que no se pueda atravesar la barricada ni la policia)
+            // 9. Bloqueos invisibles anti-exploit (barricada, policia y limites de mapa)
             AddBlocker(root.transform, "Bloqueo_Invisible_Juarez", new Vector3(0f, 2f, 80.6f), new Vector3(15.5f, 4f, 0.5f));
             AddBlocker(root.transform, "Bloqueo_Invisible_Galeana", new Vector3(45.3f, 2f, 72.5f), new Vector3(0.5f, 4f, 5.5f));
+            AddBlocker(root.transform, "Bloqueo_Sur_Juarez", new Vector3(0f, 2f, -40f), new Vector3(16f, 4f, 1f));
+            AddBlocker(root.transform, "Bloqueo_Norte_Juarez", new Vector3(0f, 2f, 122f), new Vector3(16f, 4f, 1f));
+            AddBlocker(root.transform, "Bloqueo_Oeste_Hospital", new Vector3(19.5f, 2f, 15f), new Vector3(1f, 4f, 12f));
 
-            // 9. Jugador en Av. Juarez (57.6 m antes de la barricada, mirando hacia +Z)
+            // 10. Jugador en Av. Juarez mirando hacia +Z
             var player = GameObject.Find("Player");
             if (player != null)
             {
@@ -153,7 +165,7 @@ namespace RutaSegura.Editor
                 if (cc != null) cc.enabled = true;
             }
 
-            // 10. Triggers, marcadores AR secuenciales y destino (~200 m totales)
+            // 11. Triggers, marcadores AR secuenciales y destino (~200 m totales)
             SetBox("Trigger_Cierre", new Vector3(0f, 1.5f, 56f), new Vector3(10f, 3f, 2f), true);
             SetBox("Zona_Peligro_Calle", new Vector3(0f, 1.5f, 75f), new Vector3(10f, 3f, 9f), true);
             SetBox("Destino_Floreria", new Vector3(92.5f, 1.5f, 15f), new Vector3(4f, 3f, 10f), true);
@@ -167,7 +179,6 @@ namespace RutaSegura.Editor
                 SetMarkerText(marker1, "Ruta Alternativa Detectada", "Callejon del Refugio ->");
             }
 
-            // Vincular Trigger_Cierre con barricada y primer marcador
             var roadblockEvent = UnityEngine.Object.FindFirstObjectByType<DynamicRoadblockEvent>();
             if (roadblockEvent != null)
             {
@@ -182,25 +193,28 @@ namespace RutaSegura.Editor
                 soEvt.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            // Segundo marcador: giro al sur en Callejon 2 antes de llegar a la policia en Galeana
+            // Segundo marcador: giro al sur en Callejon 2 antes del cordon policial en Galeana (dispara fase Detour)
             var markerCallejon2Obj = new GameObject("Marcador_Callejon_2");
             markerCallejon2Obj.transform.SetParent(root.transform, false);
             markerCallejon2Obj.transform.position = new Vector3(29.5f, 0.1f, 70.5f);
             var markerCallejon2 = markerCallejon2Obj.AddComponent<AlternativeRouteMarker>();
             SetMarkerText(markerCallejon2, "Desvio por Callejon", "Girar a la derecha ->");
-            CreateMarkerTrigger(root.transform, "Trigger_Callejon_1", new Vector3(16f, 1.5f, 72.5f), new Vector3(2f, 3f, 5f), markerCallejon2, marker1);
+            CreateMarkerTrigger(root.transform, "Trigger_Callejon_1", new Vector3(16f, 1.5f, 72.5f), new Vector3(2f, 3f, 5f), markerCallejon2, marker1, entersDetourPhase: true);
 
-            // Tercer marcador: salida a Calle Hospital hacia la Floreria
+            // Tercer marcador: salida a Calle Hospital hacia Floreria El Jazmin
             var markerHospitalObj = new GameObject("Marcador_Calle_Hospital");
             markerHospitalObj.transform.SetParent(root.transform, false);
             markerHospitalObj.transform.position = new Vector3(29.5f, 0.1f, 18.0f);
             var markerHospital = markerHospitalObj.AddComponent<AlternativeRouteMarker>();
             SetMarkerText(markerHospital, "Nueva Ruta", "Calle Hospital ->");
-            CreateMarkerTrigger(root.transform, "Trigger_Callejon_2", new Vector3(29.5f, 1.5f, 38f), new Vector3(5f, 3f, 2f), markerHospital, markerCallejon2);
+            CreateMarkerTrigger(root.transform, "Trigger_Callejon_2", new Vector3(29.5f, 1.5f, 38f), new Vector3(5f, 3f, 2f), markerHospital, markerCallejon2, entersDetourPhase: false);
+
+            // 12. Remapear todos los materiales al set PBR con normales, emision y GPU Instancing
+            RemapAllMaterials(root, materialMap);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Ruta larga ensamblada: Av. Juarez -> Callejones -> Calle Hospital -> Floreria (~200 m).");
+            Debug.Log("<color=green>[GUADALAJARA BUILDER]</color> Ruta larga ensamblada con PBR, Static Batching, torretas y rotulacion tapatia.");
         }
 
         private static GameObject Place(string folder, string assetName, Transform parent, Vector3 worldPos, float yaw, string name, bool addCollider)
@@ -237,10 +251,30 @@ namespace RutaSegura.Editor
             return holder;
         }
 
-        private static void RemapSignMaterials(GameObject vallaRoot, Material placaCerrada, Material placaDesvio, Material metalValla)
+        private static Dictionary<string, Material> LoadMaterialMap()
         {
-            if (vallaRoot == null) return;
-            foreach (var mr in vallaRoot.GetComponentsInChildren<MeshRenderer>(true))
+            var map = new Dictionary<string, Material>();
+            string[] guids = AssetDatabase.FindAssets("t:Material", new[] { MaterialsDir });
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat != null)
+                {
+                    map[mat.name] = mat;
+                }
+            }
+            return map;
+        }
+
+        private static void RemapAllMaterials(GameObject root, Dictionary<string, Material> map)
+        {
+            if (root == null || map == null || map.Count == 0) return;
+
+            var sortedKeys = new List<string>(map.Keys);
+            sortedKeys.Sort((a, b) => b.Length.CompareTo(a.Length));
+
+            foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
             {
                 var shared = mr.sharedMaterials;
                 bool changed = false;
@@ -248,27 +282,69 @@ namespace RutaSegura.Editor
                 {
                     var cur = shared[i];
                     if (cur == null) continue;
-                    if (cur.name.StartsWith("M_Placa_CalleCerrada") && placaCerrada != null && cur != placaCerrada)
+
+                    string cleanName = cur.name.Replace(" (Instance)", "");
+                    Material target = null;
+
+                    if (!map.TryGetValue(cleanName, out target))
                     {
-                        shared[i] = placaCerrada;
-                        changed = true;
+                        int dotIdx = cleanName.IndexOf('.');
+                        if (dotIdx > 0)
+                        {
+                            map.TryGetValue(cleanName.Substring(0, dotIdx), out target);
+                        }
                     }
-                    else if (cur.name.StartsWith("M_Placa_Desvio") && placaDesvio != null && cur != placaDesvio)
+
+                    if (target == null)
                     {
-                        shared[i] = placaDesvio;
-                        changed = true;
+                        for (int k = 0; k < sortedKeys.Count; k++)
+                        {
+                            string key = sortedKeys[k];
+                            if (cleanName.Contains(key))
+                            {
+                                target = map[key];
+                                break;
+                            }
+                        }
                     }
-                    else if (cur.name.StartsWith("M_Metal_Valla") && metalValla != null && cur != metalValla)
+
+                    if (target != null && cur != target)
                     {
-                        shared[i] = metalValla;
+                        shared[i] = target;
                         changed = true;
                     }
                 }
+
                 if (changed)
                 {
                     mr.sharedMaterials = shared;
                 }
             }
+        }
+
+        private static void MarkStaticRecursive(GameObject go)
+        {
+            if (go == null) return;
+            StaticEditorFlags flags = StaticEditorFlags.BatchingStatic |
+                                      StaticEditorFlags.OccludeeStatic |
+                                      StaticEditorFlags.OccluderStatic;
+            foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
+            {
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
+            }
+        }
+
+        private static void AddPointLight(Transform parent, string name, Vector3 pos, Color color, float range, float intensity)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = color;
+            light.range = range;
+            light.intensity = intensity;
+            light.shadows = LightShadows.None;
         }
 
         private static void ValidateBounds(Transform t, string assetName)
@@ -336,7 +412,7 @@ namespace RutaSegura.Editor
             }
         }
 
-        private static void CreateMarkerTrigger(Transform parent, string name, Vector3 pos, Vector3 size, AlternativeRouteMarker showMarker, AlternativeRouteMarker hideMarker)
+        private static void CreateMarkerTrigger(Transform parent, string name, Vector3 pos, Vector3 size, AlternativeRouteMarker showMarker, AlternativeRouteMarker hideMarker, bool entersDetourPhase)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -348,6 +424,7 @@ namespace RutaSegura.Editor
             var so = new SerializedObject(comp);
             so.FindProperty("marker").objectReferenceValue = showMarker;
             so.FindProperty("markerToHide").objectReferenceValue = hideMarker;
+            so.FindProperty("entersDetourPhase").boolValue = entersDetourPhase;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

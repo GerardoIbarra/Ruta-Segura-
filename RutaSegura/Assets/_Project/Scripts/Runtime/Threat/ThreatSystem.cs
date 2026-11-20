@@ -2,26 +2,26 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using RutaSegura.Runtime.Core;
+using RutaSegura.Runtime.Mission;
+using RutaSegura.Runtime.UI;
 
 namespace RutaSegura.Runtime.Threat
 {
     /// <summary>
-    /// Sistema de cálculo de riesgo contextual según la Sección 4.4 del GDD.
-    /// Administra una escala determinista de 0 a 100, transiciones de estado
-    /// y condición de fracaso por sobreexposición.
-    /// Diseñado con estética sobria y profesional de videojuego, sin emojis.
+    /// Sistema de calculo de riesgo contextual (0 a 100), transiciones de estado
+    /// y condicion de fracaso por sobreexposicion con pantalla uGUI.
     /// </summary>
     [AddComponentMenu("Ruta Segura/Threat/Threat System")]
     public class ThreatSystem : MonoBehaviour
     {
         public static ThreatSystem Instance { get; private set; }
 
-        [Header("Configuración de Amenaza (0 - 100)")]
-        [Tooltip("Amenaza actual")]
+        [Header("Configuracion de Amenaza (0 - 100)")]
         [Range(0f, 100f)]
         [SerializeField] private float currentThreat = 0f;
 
-        [Tooltip("Velocidad de recuperación / calma por segundo en zonas seguras")]
         [SerializeField] private float decayRatePerSecond = 5f;
 
         [Header("Umbrales de Estado")]
@@ -29,12 +29,12 @@ namespace RutaSegura.Runtime.Threat
         [SerializeField] private float highThreshold = 50f;
         [SerializeField] private float criticalThreshold = 75f;
 
-        [Header("Condición de Fracaso")]
+        [Header("Condicion de Fracaso")]
         [SerializeField] private bool isMissionFailed = false;
 
-        // Tasa activa de cambio aplicada por zonas actuales
-        private float activeThreatRate = 0f;
+        private float activeThreatRate;
         private ThreatLevel currentLevel = ThreatLevel.Low;
+        private GameObject failureOverlay;
 
         public float CurrentThreat => currentThreat;
         public ThreatLevel CurrentLevel => currentLevel;
@@ -55,12 +55,56 @@ namespace RutaSegura.Runtime.Threat
             UpdateThreatLevel(silent: true);
         }
 
+        private void Start()
+        {
+            BuildFailureUI();
+        }
+
+        private void BuildFailureUI()
+        {
+            var hud = TacticalHUDCanvas.GetOrCreate();
+            if (hud == null || hud.Root == null) return;
+
+            var bg = hud.CreatePanel("Failure_Overlay", hud.Root, new Color(0.04f, 0.02f, 0.03f, 0.90f));
+            TacticalHUDCanvas.Stretch(bg.rectTransform);
+            bg.raycastTarget = false;
+
+            var card = hud.CreatePanel("Failure_Card", bg.rectTransform, new Color(0.12f, 0.05f, 0.06f, 0.97f));
+            var rt = card.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(580f, 200f);
+            card.raycastTarget = false;
+
+            var border = hud.CreatePanel("RedAccent", rt, new Color(0.92f, 0.2f, 0.2f, 1f));
+            border.rectTransform.anchorMin = new Vector2(0f, 1f);
+            border.rectTransform.anchorMax = new Vector2(1f, 1f);
+            border.rectTransform.pivot = new Vector2(0.5f, 1f);
+            border.rectTransform.anchoredPosition = Vector2.zero;
+            border.rectTransform.sizeDelta = new Vector2(0f, 4f);
+            border.raycastTarget = false;
+
+            var lbl = hud.CreateText(
+                "FailureLabel",
+                rt,
+                "[ MISION FALLIDA ]\n\nQuedaste atrapado en el tumulto / corte de calle.\n\nPresiona [ R ] para reintentar",
+                21,
+                Color.white,
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold);
+            TacticalHUDCanvas.Stretch(lbl.rectTransform, 18f);
+
+            failureOverlay = bg.gameObject;
+            failureOverlay.SetActive(isMissionFailed);
+        }
+
         private void Update()
         {
             if (isMissionFailed)
             {
-                // Permitir reiniciar con la tecla R
-                if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                // Si no hay GameLoopManager activo, este script respalda [R]
+                if (GameLoopManager.Instance == null && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                 {
                     RestartMission();
                 }
@@ -71,12 +115,10 @@ namespace RutaSegura.Runtime.Threat
 
             if (activeThreatRate > 0f)
             {
-                // Estamos dentro de una zona de tensión: sube la amenaza
                 currentThreat += activeThreatRate * Time.deltaTime;
             }
             else if (currentThreat > 0f)
             {
-                // Estamos en zona tranquila: la amenaza decae progresivamente
                 currentThreat -= decayRatePerSecond * Time.deltaTime;
             }
 
@@ -87,7 +129,6 @@ namespace RutaSegura.Runtime.Threat
                 UpdateThreatLevel(silent: false);
             }
 
-            // Comprobar condición de fracaso al llegar al 100%
             if (currentThreat >= 100f && !isMissionFailed)
             {
                 TriggerMissionFailure();
@@ -98,18 +139,34 @@ namespace RutaSegura.Runtime.Threat
         {
             isMissionFailed = true;
             OnMissionFailed?.Invoke();
-            Debug.LogError("<color=red>[FRACASO]</color> Quedaste atrapado en el tumulto / corte de calle. Misión fallida.");
 
-            // Desactivar el movimiento del jugador
+            MissionController.Instance?.FailMission();
+            GameLoopManager.Instance?.SetPhase(GamePhase.Outcome);
+
+            if (failureOverlay != null)
+            {
+                failureOverlay.SetActive(true);
+            }
+
             var player = FindFirstObjectByType<Player.PlayerController>();
             if (player != null)
             {
                 player.enabled = false;
             }
+
+            Debug.LogError("<color=red>[FRACASO]</color> Quedaste atrapado en el tumulto / corte de calle. Mision fallida.");
         }
 
         public void RestartMission()
         {
+            if (GameLoopManager.Instance != null)
+            {
+                GameLoopManager.Instance.RestartLevel();
+                return;
+            }
+            Time.timeScale = 1f;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
@@ -159,10 +216,10 @@ namespace RutaSegura.Runtime.Threat
         {
             switch (level)
             {
-                case ThreatLevel.Low: return new Color(0.2f, 0.85f, 0.3f);     // Verde
-                case ThreatLevel.Moderate: return new Color(0.95f, 0.8f, 0.2f); // Amarillo
-                case ThreatLevel.High: return new Color(1.0f, 0.5f, 0.1f);      // Naranja
-                case ThreatLevel.Critical: return new Color(0.95f, 0.2f, 0.2f); // Rojo
+                case ThreatLevel.Low: return new Color(0.2f, 0.85f, 0.3f);
+                case ThreatLevel.Moderate: return new Color(0.95f, 0.8f, 0.2f);
+                case ThreatLevel.High: return new Color(1.0f, 0.5f, 0.1f);
+                case ThreatLevel.Critical: return new Color(0.95f, 0.2f, 0.2f);
                 default: return Color.white;
             }
         }
@@ -176,37 +233,6 @@ namespace RutaSegura.Runtime.Threat
                 case ThreatLevel.High: return "#FF801A";
                 case ThreatLevel.Critical: return "#F23333";
                 default: return "#FFFFFF";
-            }
-        }
-
-        private void OnGUI()
-        {
-            // Pantalla de Fracaso si se alcanza el 100% de amenaza (sin emojis, estilo juego sobrio)
-            if (isMissionFailed)
-            {
-                var originalColor = GUI.color;
-                GUI.color = new Color(0.06f, 0.04f, 0.05f, 0.90f);
-                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-
-                var boxRect = new Rect(Screen.width / 2f - 270f, Screen.height / 2f - 85f, 540f, 170f);
-                GUI.color = new Color(0.12f, 0.06f, 0.06f, 0.96f);
-                GUI.Box(boxRect, GUIContent.none);
-
-                // Borde superior rojo de advertencia
-                GUI.color = new Color(0.92f, 0.2f, 0.2f, 1f);
-                GUI.DrawTexture(new Rect(boxRect.x, boxRect.y, boxRect.width, 3f), Texture2D.whiteTexture);
-
-                var failureStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 18,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    wordWrap = true
-                };
-                failureStyle.normal.textColor = Color.white;
-
-                GUI.Label(boxRect, "[ MISIÓN FALLIDA ]\n\nQuedaste atrapado en el tumulto / corte de calle.\n\nPresiona [ R ] para reintentar", failureStyle);
-                GUI.color = originalColor;
             }
         }
     }

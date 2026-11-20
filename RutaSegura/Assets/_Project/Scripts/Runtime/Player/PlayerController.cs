@@ -71,10 +71,17 @@ namespace RutaSegura.Runtime.Player
         private Vector2 currentLookVector;
         private float verticalVelocity = -2f;
         private float cameraPitch = 0.0f;
+        private float externalSpeedMultiplier = 1.0f;
 
         public float CurrentSpeed => currentSpeed;
         public bool IsSprinting => isSprinting;
         public bool IsCautious => isCautious;
+        public bool IsGrounded => isGrounded;
+
+        public void SetExternalSpeedMultiplier(float multiplier)
+        {
+            externalSpeedMultiplier = Mathf.Clamp(multiplier, 0.2f, 1.5f);
+        }
 
         private void Awake()
         {
@@ -239,6 +246,7 @@ namespace RutaSegura.Runtime.Player
                 targetSpeed = sprintSpeed;
             }
 
+            targetSpeed *= externalSpeedMultiplier;
             currentSpeed = moveInput.sqrMagnitude > 0.01f ? targetSpeed : 0f;
 
             Vector3 moveDirection = transform.right * moveInput.x + transform.forward * moveInput.y;

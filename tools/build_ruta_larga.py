@@ -118,6 +118,12 @@ def mats():
         'metal_valla': mat("M_Metal_Valla", (0.75, 0.75, 0.78), 0.4, 0.6),
         'placa_cerrada': mat("M_Placa_CalleCerrada", (0.96, 0.73, 0.08), 0.45),
         'placa_desvio': mat("M_Placa_Desvio", (0.96, 0.73, 0.08), 0.45),
+        'letrero_floreria': mat("M_Letrero_Floreria", (0.14, 0.45, 0.26), 0.4),
+        'placa_juarez': mat("M_Placa_Calle_Juarez", (0.12, 0.24, 0.48), 0.4),
+        'placa_hospital': mat("M_Placa_Calle_Hospital", (0.12, 0.24, 0.48), 0.4),
+        'manta_protesta': mat("M_Manta_Protesta", (0.90, 0.88, 0.82), 0.75),
+        'flores_rojas': mat("M_Flores_Rojas", (0.82, 0.14, 0.18), 0.55),
+        'flores_moradas': mat("M_Flores_Moradas", (0.55, 0.22, 0.72), 0.55),
     }
 
 
@@ -138,7 +144,7 @@ class MeshBuilder:
             self.mat_idx[material.name] = idx
         return idx
 
-    def add_box(self, size, pos, material, uv_plate=False):
+    def add_box(self, size, pos, material, uv_plate=False, uv_scale=2.5, uv_axis='Z'):
         sx, sy, sz = size
         if sx <= 0.001 or sy <= 0.001 or sz <= 0.001:
             return
@@ -154,15 +160,35 @@ class MeshBuilder:
         faces = set(f for v in verts for f in v.link_faces)
         ux_min = ux - sx * 0.5
         uy_min = uy - sy * 0.5
+        uz_max = uz + sz * 0.5
         for f in faces:
             f.material_index = mi
             if uv_plate:
                 for loop in f.loops:
-                    vx_u = -loop.vert.co.x
                     vy_u = loop.vert.co.z
-                    u = max(0.0, min(1.0, (vx_u - ux_min) / sx))
+                    if uv_axis == 'X':
+                        # Placa mirando a -X (el jugador mira hacia +X, donde +Z queda a su izquierda)
+                        vz_u = -loop.vert.co.y
+                        u = max(0.0, min(1.0, (uz_max - vz_u) / sz))
+                    else:
+                        # Placa mirando a -Z (el jugador mira hacia +Z, donde +X queda a su derecha)
+                        vx_u = -loop.vert.co.x
+                        u = max(0.0, min(1.0, (vx_u - ux_min) / sx))
                     v_coord = max(0.0, min(1.0, (vy_u - uy_min) / sy))
                     loop[self.uv_layer].uv = (u, v_coord)
+            else:
+                # Proyeccion box UV en escala real (1 tile = uv_scale metros)
+                co0, co1, co2 = f.loops[0].vert.co, f.loops[1].vert.co, f.loops[2].vert.co
+                fn = (co1 - co0).cross(co2 - co0)
+                ax, ay, az = abs(fn.x), abs(fn.y), abs(fn.z)
+                for loop in f.loops:
+                    co = loop.vert.co
+                    if az >= ax and az >= ay:
+                        loop[self.uv_layer].uv = (-co.x / uv_scale, -co.y / uv_scale)
+                    elif ax >= ay and ax >= az:
+                        loop[self.uv_layer].uv = (-co.y / uv_scale, co.z / uv_scale)
+                    else:
+                        loop[self.uv_layer].uv = (-co.x / uv_scale, co.z / uv_scale)
 
     def add_cylinder(self, radius, depth, pos, material, axis='Y', rot_x_rad=0.0, segments=12):
         """Cilindro en coordenadas Unity; axis 'Y'=vertical, 'X'=horizontal ancho, 'Z'=profundo."""
@@ -190,6 +216,9 @@ class MeshBuilder:
         mi = self.mat_slot(material)
         for f in set(f for v in verts for f in v.link_faces):
             f.material_index = mi
+            for loop in f.loops:
+                co = loop.vert.co
+                loop[self.uv_layer].uv = ((-co.x + co.z) * 0.5, -co.y * 0.5)
 
 
 def box(mb, size, pos, material, name="box"):
@@ -399,6 +428,29 @@ def make_piso():
         box(p, (0.15, 0.01, 3.0), (50.0, 0.005, z + 1.5), m['linea_blanca'])
         z += 7.0
 
+    # Micro-props tapatios: bolardos de hierro en esquinas, registros SIAPA/CFE y volantes caidos
+    for z in (67.5, 69.0, 76.0, 77.5):
+        box(p, (0.14, 0.85, 0.14), (5.25, 0.605, z), m['herreria'])
+    for x in (25.8, 26.7, 32.3, 33.2):
+        box(p, (0.14, 0.85, 0.14), (x, 0.605, 20.3), m['herreria'])
+
+    for z in (28.0, 52.0, 66.0):
+        box(p, (0.8, 0.015, 0.5), (-6.2, 0.1875, z), m['coladera'])
+        box(p, (0.8, 0.015, 0.5), (6.2, 0.1875, z), m['coladera'])
+    for x in (48.0, 72.0):
+        box(p, (0.8, 0.015, 0.5), (x, 0.1875, 21.2), m['coladera'])
+
+    rng_p = random.Random(42)
+    for _ in range(42):
+        box(p, (rng_p.uniform(0.22, 0.34), 0.008, rng_p.uniform(0.18, 0.28)),
+            (rng_p.uniform(-4.5, 4.5), 0.014, rng_p.uniform(30.0, 78.0)), m['cartulina'])
+    for _ in range(18):
+        box(p, (rng_p.uniform(0.22, 0.34), 0.008, rng_p.uniform(0.18, 0.28)),
+            (rng_p.uniform(8.0, 40.0), 0.014, rng_p.uniform(70.4, 74.6)), m['cartulina'])
+    for _ in range(20):
+        box(p, (rng_p.uniform(0.22, 0.34), 0.008, rng_p.uniform(0.18, 0.28)),
+            (rng_p.uniform(27.4, 31.6), 0.014, rng_p.uniform(24.0, 68.0)), m['cartulina'])
+
     export(p, "SM_Ruta_Piso_Completo.fbx", ARCH_DIR)
 
 
@@ -420,6 +472,8 @@ def make_manzanas_juarez():
     street_row(p, m, 'x', 94.0, -62.0, -15.5, -1, 'main', 19)
     street_row(p, m, 'x', 94.0, 15.5, 37.0, -1, 'main', 20)
     street_row(p, m, 'z', -62.0, 82.0, 94.0, +1, 'main', 21)
+    # Placa nomenclatura colonial en esquina Av. Juarez y Callejon 1
+    p.add_box((0.08, 0.36, 0.95), (7.42, 3.72, 69.2), m['placa_juarez'], uv_plate=True, uv_axis='X')
     export(p, "SM_Manzanas_Juarez_Hidalgo.fbx", ARCH_DIR)
 
 
@@ -464,10 +518,15 @@ def make_manzanas_hospital():
     row.fbox(zc + 3.6, 1.5, 0.05, 1.8, 3.0, 0.10, m['madera'])
     row.fbox(zc + 3.6, 1.6, 0.03, 2.2, 3.2, 0.06, m['cantera'])
     row.fbox(zc, 3.6, 0.9, 11.0, 0.08, 1.8, m['toldo'])
-    row.fbox(zc, 4.4, 0.08, 9.0, 0.9, 0.16, m['floreria'])
-    for dz in [-4.5, -3.0, -1.5, 0.0, 1.5]:
+    p.add_box((0.16, 0.9, 9.0), (94.92, 4.4, zc), m['letrero_floreria'], uv_plate=True, uv_axis='X')
+    p.add_box((0.95, 0.36, 0.08), (32.8, 3.72, 22.42), m['placa_hospital'], uv_plate=True, uv_axis='Z')
+    flower_mats = [m['flores_rojas'], m['amarillo'], m['flores_moradas'], m['flores_rojas'], m['amarillo']]
+    for i, dz in enumerate([-4.5, -3.0, -1.5, 0.0, 1.5]):
         row.fbox(zc + dz, 0.3, 0.7, 1.1, 0.6, 0.7, m['floreria'])
-        row.fbox(zc + dz, 0.75, 0.7, 1.0, 0.4, 0.6, m['amarillo'])
+        row.fbox(zc + dz, 0.75, 0.7, 1.0, 0.4, 0.6, flower_mats[i % len(flower_mats)])
+    # Estantes y arreglos florales colgantes junto al aparador
+    row.fbox(zc - 2.0, 2.95, 0.28, 5.8, 0.25, 0.35, m['flores_rojas'])
+    row.fbox(zc - 2.0, 0.55, 0.35, 5.4, 0.45, 0.45, m['flores_moradas'])
     for dz in [-4.0, 0.0, 4.0]:
         row.fbox(zc + dz, 6.3, 0.06, 1.4, 2.0, 0.12, m['cantera'])
         row.fbox(zc + dz, 6.3, 0.07, 1.1, 1.7, 0.14, m['vidrio'])
@@ -525,7 +584,7 @@ def make_multitud():
         person(p, m, rng, x, z, police=False, sign=rng.random() < 0.35)
     box(p, (0.05, 1.9, 0.05), (-1.6, 0.95, -3.9), m['madera'])
     box(p, (0.05, 1.9, 0.05), (1.6, 0.95, -3.9), m['madera'])
-    box(p, (3.3, 0.9, 0.03), (0.0, 1.5, -3.92), m['cartulina'])
+    p.add_box((3.3, 0.9, 0.04), (0.0, 1.5, -3.92), m['manta_protesta'], uv_plate=True, uv_axis='Z')
     export(p, "SM_Multitud_Protesta.fbx", PROPS_DIR)
 
 

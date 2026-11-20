@@ -1,23 +1,25 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using RutaSegura.Runtime.UI;
-using RutaSegura.Runtime.Navigation;
+using RutaSegura.Runtime.Audio;
+using RutaSegura.Runtime.Core;
 using RutaSegura.Runtime.Events;
+using RutaSegura.Runtime.Mission;
+using RutaSegura.Runtime.Navigation;
+using RutaSegura.Runtime.Player;
+using RutaSegura.Runtime.UI;
 
 namespace RutaSegura.Editor
 {
     /// <summary>
-    /// Automatizacion completa de la escena para configurar todos los componentes,
-    /// referencias y senaletica sin necesidad de trabajo manual en el inspector.
-    /// Se ejecuta automaticamente al cargar el proyecto o mediante el menu Tools.
+    /// Automatizacion completa de la escena para configurar todos los sistemas del estudio:
+    /// arquitectura PBR, iluminacion, audio biometrico/urbano, FSM, HUD uGUI y escaner de entorno.
     /// </summary>
     [InitializeOnLoad]
     public static class AutoSceneConfigurator
     {
         static AutoSceneConfigurator()
         {
-            // Ejecutar automaticamente tras compilar en Unity
             EditorApplication.delayCall += ExecuteAutoSetupSilent;
         }
 
@@ -29,6 +31,7 @@ namespace RutaSegura.Editor
 
         private static void ExecuteAutoSetupSilent()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             PerformSetup(showDialog: false);
         }
 
@@ -39,26 +42,39 @@ namespace RutaSegura.Editor
 
             bool modified = false;
 
-            // 1. Generar texturas y materiales de senaletica vial
+            // 1. Generar texturas PBR, senaletica vial y rotulacion tapatia
             RoadSignTextureGenerator.GenerateRoadSigns(showDialog: false);
 
-            // 2. Construir y alinear entorno urbano real de Guadalajara
+            // 2. Construir, orientar, remapear materiales y volver estatico el entorno
             GuadalajaraStreetBuilder.BuildGuadalajaraStreet();
             modified = true;
 
-            // 3. Configurar GameManager con CardiacBiometricHUD
+            // 3. Configurar iluminacion de tarde nublada tapatia y neblina atmosferica
+            UrbanLightingSetup.SetupSunsetAtmosphere(showDialog: false);
+
+            // 4. Configurar GameManager con todos los subsistemas Runtime
             var gmObj = GameObject.Find("GameManager");
             if (gmObj != null)
             {
-                if (gmObj.GetComponent<CardiacBiometricHUD>() == null)
-                {
-                    Undo.AddComponent<CardiacBiometricHUD>(gmObj);
-                    modified = true;
-                    Debug.Log("<color=green>[AUTO-SETUP]</color> CardiacBiometricHUD anadido a GameManager.");
-                }
+                modified |= EnsureComponent<MissionController>(gmObj);
+                modified |= EnsureComponent<GameLoopManager>(gmObj);
+                modified |= EnsureComponent<TacticalHUDCanvas>(gmObj);
+                modified |= EnsureComponent<CardiacBiometricHUD>(gmObj);
+                modified |= EnsureComponent<PhoneHUD>(gmObj);
+                modified |= EnsureComponent<BiometricAudioSystem>(gmObj);
+                modified |= EnsureComponent<UrbanSoundscapeController>(gmObj);
+                modified |= EnsureComponent<ProtestAtmosphereController>(gmObj);
             }
 
-            // 4. Crear o encontrar el Marcador AR de Ruta Alternativa
+            // 5. Configurar Player con audio de pasos y escaner activo ('Leyendo Entorno...')
+            var playerObj = GameObject.Find("Player");
+            if (playerObj != null)
+            {
+                modified |= EnsureComponent<FootstepAudioController>(playerObj);
+                modified |= EnsureComponent<EnvironmentScanner>(playerObj);
+            }
+
+            // 6. Crear o encontrar el Marcador AR de Ruta Alternativa
             var markerObj = GameObject.Find("Marcador_Ruta_Alternativa");
             AlternativeRouteMarker markerComponent = null;
 
@@ -69,11 +85,9 @@ namespace RutaSegura.Editor
                 markerComponent = markerObj.AddComponent<AlternativeRouteMarker>();
                 Undo.RegisterCreatedObjectUndo(markerObj, "Crear Marcador AR");
                 modified = true;
-                Debug.Log("<color=green>[AUTO-SETUP]</color> Marcador AR creado en la entrada del Callejon 1.");
             }
             else
             {
-                // La posicion la define GuadalajaraStreetBuilder (entrada del Callejon 1)
                 markerComponent = markerObj.GetComponent<AlternativeRouteMarker>();
                 if (markerComponent == null)
                 {
@@ -82,7 +96,7 @@ namespace RutaSegura.Editor
                 }
             }
 
-            // 5. Conectar el evento de cierre al marcador y a la valla
+            // 7. Conectar el evento de cierre al marcador y mantener la barricada activa desde el inicio
             var triggerCierre = Object.FindFirstObjectByType<DynamicRoadblockEvent>();
             var vallaObj = GameObject.Find("SM_Valla_Bloqueo");
 
@@ -109,13 +123,12 @@ namespace RutaSegura.Editor
                         modified = true;
                     }
 
-                    // Asegurar que la valla tiene BoxCollider (visible desde el inicio de Av. Juarez)
                     var col = vallaObj.GetComponent<BoxCollider>();
                     if (col == null)
                     {
                         col = vallaObj.AddComponent<BoxCollider>();
-                        col.center = new Vector3(0f, 0.6f, 0f);
-                        col.size = new Vector3(2.4f, 1.2f, 0.6f);
+                        col.center = new Vector3(0f, 0.65f, 0f);
+                        col.size = new Vector3(15f, 1.3f, 0.6f);
                         modified = true;
                     }
                 }
@@ -123,24 +136,31 @@ namespace RutaSegura.Editor
                 so.ApplyModifiedProperties();
             }
 
-            // 6. Guardar la escena si hubo cambios
+            // 8. Guardar la escena si hubo cambios
             if (modified)
             {
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
-                Debug.Log("<color=cyan>[AUTO-SETUP COMPLETO]</color> Escena configurada y guardada al 100%.");
+                Debug.Log("<color=cyan>[AUTO-SETUP COMPLETO]</color> Vertical Slice configurado (Audio, PBR, Scanner, FSM, uGUI, Protesta).");
             }
 
             if (showDialog)
             {
-                EditorUtility.DisplayDialog("Ruta Segura", 
+                EditorUtility.DisplayDialog("Ruta Segura",
                     "Configuracion completada con exito:\n\n" +
-                    "- Entorno urbano de Guadalajara ensamblado con proporciones reales\n" +
-                    "- HUD biometrico de pulso activado en GameManager\n" +
-                    "- Marcador AR proyectado en asfalto conectado\n" +
-                    "- Senaletica vial y valla vinculadas\n\n" +
+                    "- Texturas PBR (Albedo + Normals), SSAO y GPU Instancing aplicados\n" +
+                    "- Audio biometrico (BPM), pasos, tunel auditivo y ambiente 3D de protesta\n" +
+                    "- Torretas policiacas, manta de protesta y rotulacion Floreria El Jazmin\n" +
+                    "- Escaner activo [E]/[Q] ('Leyendo Entorno...') y HUD uGUI con mini-mapa en vivo\n\n" +
                     "Presiona Play para probar.", "Aceptar");
             }
+        }
+
+        private static bool EnsureComponent<T>(GameObject target) where T : Component
+        {
+            if (target.GetComponent<T>() != null) return false;
+            Undo.AddComponent<T>(target);
+            return true;
         }
     }
 }

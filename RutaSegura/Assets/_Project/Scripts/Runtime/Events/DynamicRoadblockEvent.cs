@@ -1,40 +1,38 @@
 using UnityEngine;
+using UnityEngine.UI;
+using RutaSegura.Runtime.Core;
 using RutaSegura.Runtime.Threat;
 using RutaSegura.Runtime.Navigation;
+using RutaSegura.Runtime.UI;
 
 namespace RutaSegura.Runtime.Events
 {
     /// <summary>
-    /// Evento dinámico que altera las condiciones de una ruta en tiempo real.
-    /// Simula el cierre repentino de una calle por vallas o cuerpos de seguridad,
-    /// activa el marcador holográfico de ruta alternativa y obliga al jugador a adaptarse.
+    /// Evento dinamico que altera las condiciones de la ruta principal.
+    /// Activa o asegura la barrera fisica, enciende el marcador de desvio,
+    /// notifica al GameLoopManager la fase Incident y muestra aviso superior uGUI.
     /// </summary>
     [RequireComponent(typeof(Collider))]
     [AddComponentMenu("Ruta Segura/Events/Dynamic Roadblock Event")]
     public class DynamicRoadblockEvent : MonoBehaviour
     {
         [Header("Elementos del Evento")]
-        [Tooltip("Objeto que se activará para bloquear físicamente el paso (valla, reja o barricada)")]
         [SerializeField] private GameObject roadblockBarrier;
-
-        [Tooltip("Zona de amenaza que se activará o intensificará")]
         [SerializeField] private ThreatZone associatedThreatZone;
-
-        [Tooltip("Marcador AR que aparecerá proyectado en el asfalto frente al callejón")]
         [SerializeField] private AlternativeRouteMarker alternativeRouteMarker;
 
-        [Header("Mensaje Diegético (Eco Urbano / Alerta)")]
+        [Header("Mensaje Diegetico (Eco Urbano / Alerta)")]
         [TextArea(2, 4)]
-        [SerializeField] private string alertNotification = "[ECO URBANO - ALERTA VIAL]: Cierre inmediato de la avenida principal por contingente. Rutas bloqueadas.";
+        [SerializeField] private string alertNotification = "[ECO URBANO - ALERTA VIAL]: Cierre inmediato de Av. Juarez por contingente. Busca ruta alterna.";
 
-        [Tooltip("Aumento inmediato de amenaza al presenciar el cierre")]
         [SerializeField] private float threatSpike = 20f;
-
-        [Tooltip("Duración en pantalla del aviso (segundos)")]
         [SerializeField] private float notificationDuration = 6f;
 
-        private bool eventTriggered = false;
-        private float notificationTimer = 0f;
+        private bool eventTriggered;
+        private float notificationTimer;
+
+        private GameObject toastPanel;
+        private Text toastText;
 
         private void Reset()
         {
@@ -45,11 +43,49 @@ namespace RutaSegura.Runtime.Events
             }
         }
 
+        private void Start()
+        {
+            BuildToastUI();
+        }
+
+        private void BuildToastUI()
+        {
+            var hud = TacticalHUDCanvas.GetOrCreate();
+            if (hud == null || hud.Root == null) return;
+
+            var panel = hud.CreatePanel("Roadblock_AlertToast", hud.Root, new Color(0.08f, 0.10f, 0.14f, 0.94f));
+            var rt = panel.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -24f);
+            rt.sizeDelta = new Vector2(680f, 70f);
+            panel.raycastTarget = false;
+
+            var border = hud.CreatePanel("OrangeAccent", rt, new Color(0.95f, 0.45f, 0.12f, 0.95f));
+            border.rectTransform.anchorMin = new Vector2(0f, 1f);
+            border.rectTransform.anchorMax = new Vector2(1f, 1f);
+            border.rectTransform.pivot = new Vector2(0.5f, 1f);
+            border.rectTransform.anchoredPosition = Vector2.zero;
+            border.rectTransform.sizeDelta = new Vector2(0f, 3f);
+            border.raycastTarget = false;
+
+            toastText = hud.CreateText("AlertLabel", rt, alertNotification, 16, new Color(0.98f, 0.72f, 0.30f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            TacticalHUDCanvas.Stretch(toastText.rectTransform, 16f);
+
+            toastPanel = panel.gameObject;
+            toastPanel.SetActive(false);
+        }
+
         private void Update()
         {
             if (notificationTimer > 0f)
             {
                 notificationTimer -= Time.deltaTime;
+                if (notificationTimer <= 0f && toastPanel != null)
+                {
+                    toastPanel.SetActive(false);
+                }
             }
         }
 
@@ -68,57 +104,30 @@ namespace RutaSegura.Runtime.Events
             eventTriggered = true;
             notificationTimer = notificationDuration;
 
-            // Activar la barrera física si estaba oculta
-            if (roadblockBarrier != null)
+            if (roadblockBarrier != null && !roadblockBarrier.activeSelf)
             {
                 roadblockBarrier.SetActive(true);
             }
 
-            // Activar el marcador AR en el suelo como en el video de referencia
             if (alternativeRouteMarker != null)
             {
                 alternativeRouteMarker.ActivateMarker();
             }
 
-            // Aplicar pico de tensión al jugador
             if (ThreatSystem.Instance != null && threatSpike > 0f)
             {
                 ThreatSystem.Instance.AddThreat(threatSpike);
             }
 
-            Debug.LogWarning($"<color=yellow>[EVENTO DINÁMICO]</color> {alertNotification}");
-        }
+            GameLoopManager.Instance?.SetPhase(GamePhase.Incident);
 
-        private void OnGUI()
-        {
-            // Banner de notificación en la parte superior central simulando alerta del móvil
-            if (notificationTimer > 0f)
+            if (toastPanel != null)
             {
-                float bannerWidth = 520f;
-                float bannerHeight = 56f;
-                float x = (Screen.width - bannerWidth) / 2f;
-                float y = 18f;
-
-                var origColor = GUI.color;
-                GUI.color = new Color(0.10f, 0.12f, 0.16f, 0.94f);
-                GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), GUIContent.none);
-
-                // Borde naranja de advertencia
-                GUI.color = new Color(0.95f, 0.45f, 0.12f, 0.95f);
-                GUI.DrawTexture(new Rect(x, y, bannerWidth, 2f), Texture2D.whiteTexture);
-
-                var boxStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 12,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    wordWrap = true
-                };
-                boxStyle.normal.textColor = new Color(0.98f, 0.70f, 0.30f);
-
-                GUI.Label(new Rect(x + 12f, y + 4f, bannerWidth - 24f, bannerHeight - 8f), alertNotification, boxStyle);
-                GUI.color = origColor;
+                if (toastText != null) toastText.text = alertNotification;
+                toastPanel.SetActive(true);
             }
+
+            Debug.LogWarning($"<color=yellow>[EVENTO DINAMICO]</color> {alertNotification}");
         }
 
         private void OnDrawGizmos()

@@ -12,7 +12,12 @@ namespace RutaSegura.Editor
     public static class UrbanLightingSetup
     {
         [MenuItem("Tools/Ruta Segura/Configurar Iluminación de Atardecer (17:42)")]
-        public static void SetupSunsetAtmosphere()
+        public static void SetupSunsetAtmosphereMenu()
+        {
+            SetupSunsetAtmosphere(showDialog: true);
+        }
+
+        public static void SetupSunsetAtmosphere(bool showDialog = true)
         {
             // 1. Configurar Sol / Directional Light
             var lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
@@ -31,12 +36,11 @@ namespace RutaSegura.Editor
                 Undo.RecordObject(directionalLight.transform, "Ajustar Luz Atardecer");
                 Undo.RecordObject(directionalLight, "Ajustar Luz Atardecer");
 
-                // Ángulo de sol poniente en el oeste
-                directionalLight.transform.rotation = Quaternion.Euler(26f, -38f, 0f);
+                // Sol bajo de tarde nublada tapatia (contraste con sombras largas y farolas)
+                directionalLight.transform.rotation = Quaternion.Euler(22f, -35f, 0f);
 
-                // Luz dorada de Guadalajara
-                directionalLight.color = new Color(1.0f, 0.90f, 0.74f); // #FFE6BD
-                directionalLight.intensity = 1.15f;
+                directionalLight.color = new Color(1.0f, 0.84f, 0.66f);
+                directionalLight.intensity = 0.95f;
                 directionalLight.shadows = LightShadows.Soft;
 
                 EditorUtility.SetDirty(directionalLight);
@@ -93,8 +97,22 @@ namespace RutaSegura.Editor
                 EditorUtility.SetDirty(profile);
             }
 
-            EditorUtility.DisplayDialog("Ruta Segura", 
-                "¡Atmósfera y luz de atardecer en Guadalajara (17:42) aplicadas con éxito!", "Aceptar");
+            // 3. Iluminacion ambiental trilight y neblina atmosferica de atardecer nublado
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.28f, 0.33f, 0.42f);
+            RenderSettings.ambientEquatorColor = new Color(0.24f, 0.23f, 0.22f);
+            RenderSettings.ambientGroundColor = new Color(0.10f, 0.09f, 0.09f);
+
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.22f, 0.25f, 0.30f);
+            RenderSettings.fogDensity = 0.011f;
+
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog("Ruta Segura",
+                    "Atmosfera y luz de atardecer en Guadalajara (17:42) aplicadas con exito.", "Aceptar");
+            }
         }
     }
 }

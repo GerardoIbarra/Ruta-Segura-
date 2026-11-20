@@ -1,10 +1,11 @@
 using UnityEngine;
+using RutaSegura.Runtime.Core;
 
 namespace RutaSegura.Runtime.Navigation
 {
     /// <summary>
-    /// Activa un marcador de ruta cuando el jugador entra al volumen.
-    /// Se usa para el segundo aviso de navegacion ("Nueva Ruta: Calle Hospital").
+    /// Activa un marcador de ruta cuando el jugador entra al volumen
+    /// y opcionalmente avanza el GameLoopManager a la fase Detour.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     [AddComponentMenu("Ruta Segura/Navigation/Route Marker Trigger")]
@@ -12,6 +13,7 @@ namespace RutaSegura.Runtime.Navigation
     {
         [SerializeField] private AlternativeRouteMarker marker;
         [SerializeField] private AlternativeRouteMarker markerToHide;
+        [SerializeField] private bool entersDetourPhase = false;
 
         private bool triggered;
 
@@ -28,6 +30,7 @@ namespace RutaSegura.Runtime.Navigation
             triggered = true;
             if (markerToHide != null) markerToHide.DeactivateMarker();
             if (marker != null) marker.ActivateMarker();
+            if (entersDetourPhase) GameLoopManager.Instance?.SetPhase(GamePhase.Detour);
         }
 
         private void OnDrawGizmos()
