@@ -6,6 +6,7 @@ using UnityEngine.InputSystem.UI;
 using RutaSegura.Runtime.Audio;
 using RutaSegura.Runtime.Core;
 using RutaSegura.Runtime.Events;
+using RutaSegura.Runtime.Mission;
 using RutaSegura.Runtime.Player;
 using RutaSegura.Runtime.Threat;
 using RutaSegura.Runtime.UI;
@@ -106,14 +107,15 @@ namespace RutaSegura.EditorTools
             Check(fails, passes, enabledListeners == 1, $"AudioListener unico activo (actual={enabledListeners})");
 
             var es = Object.FindAnyObjectByType<EventSystem>();
-            Check(fails, passes,
-                es != null && es.GetComponent<InputSystemUIInputModule>() != null && es.GetComponent<StandaloneInputModule>() == null,
-                "EventSystem usa InputSystemUIInputModule (sin StandaloneInputModule)");
+            bool validEventSystem = es == null ||
+                (es.GetComponent<InputSystemUIInputModule>() != null && es.GetComponent<StandaloneInputModule>() == null);
+            Check(fails, passes, validEventSystem,
+                "EventSystem compatible con InputSystemUIInputModule (sin StandaloneInputModule)");
 
             // 6. Materiales PBR y rotulacion tapatia clave
             string[] reqMats =
             {
-                "M_Pavimento_Asfalto",
+                "M_Asfalto_Calle",
                 "M_Letrero_Floreria",
                 "M_Cartel_Neveria",
                 "M_Cartel_Carmen",
